@@ -7,12 +7,13 @@ from dotenv import find_dotenv, set_key
 from rich.console import Console
 
 from cli.models import AnalystType
+from tradingagents.dataflows.crypto_utils import normalize_crypto_symbol
 from tradingagents.llm_clients.api_key_env import get_api_key_env
 from tradingagents.llm_clients.model_catalog import get_model_options
 
 console = Console()
 
-TICKER_INPUT_EXAMPLES = "Examples: SPY, CNC.TO, 7203.T, 0700.HK"
+TICKER_INPUT_EXAMPLES = "Examples: SPY, CNC.TO, 7203.T, 0700.HK, BTC, ETH-USD"
 
 ANALYST_ORDER = [
     ("Market Analyst", AnalystType.MARKET),
@@ -43,8 +44,12 @@ def get_ticker() -> str:
 
 
 def normalize_ticker_symbol(ticker: str) -> str:
-    """Normalize ticker input while preserving exchange suffixes."""
-    return ticker.strip().upper()
+    """Normalize ticker input while preserving exchange suffixes.
+
+    Common bare crypto symbols are expanded to Yahoo-style USD pairs so the
+    existing OHLCV and indicator tools can fetch them via yfinance.
+    """
+    return normalize_crypto_symbol(ticker)
 
 
 def get_analysis_date() -> str:

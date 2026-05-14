@@ -648,7 +648,7 @@ def get_ticker():
         console.print("\n[red]No ticker symbol provided. Exiting...[/red]")
         raise typer.Exit(1)
 
-    return (ticker.strip() or "SPY").upper()
+    return normalize_ticker_symbol(ticker.strip() or "SPY")
 
 
 def get_analysis_date():

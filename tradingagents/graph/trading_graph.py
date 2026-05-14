@@ -25,6 +25,11 @@ from tradingagents.agents.utils.agent_states import (
     RiskDebateState,
 )
 from tradingagents.dataflows.config import set_config
+from tradingagents.dataflows.crypto_utils import (
+    crypto_base_symbol,
+    is_crypto_symbol,
+    normalize_crypto_symbol,
+)
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -204,6 +209,10 @@ class TradingAgentsGraph:
         explicit = self.config.get("benchmark_ticker")
         if explicit:
             return explicit
+        if is_crypto_symbol(ticker):
+            if crypto_base_symbol(ticker) == "BTC":
+                return self.config.get("crypto_btc_benchmark_ticker", "ETH-USD")
+            return self.config.get("crypto_benchmark_ticker", "BTC-USD")
         benchmark_map = self.config.get("benchmark_map", {})
         ticker_upper = ticker.upper()
         for suffix, benchmark in benchmark_map.items():
@@ -298,6 +307,9 @@ class TradingAgentsGraph:
         with a per-ticker SqliteSaver so a crashed run can resume from the last
         successful node on a subsequent invocation with the same ticker+date.
         """
+        company_name = normalize_crypto_symbol(
+            company_name, self.config.get("crypto_quote_currency", "USD")
+        )
         self.ticker = company_name
 
         # Resolve any pending memory-log entries for this ticker before the pipeline runs.
@@ -382,6 +394,9 @@ class TradingAgentsGraph:
 
     def propagate_stream(self, company_name, trade_date, callbacks: Optional[List] = None):
         """Stream graph state updates while preserving propagate side effects."""
+        company_name = normalize_crypto_symbol(
+            company_name, self.config.get("crypto_quote_currency", "USD")
+        )
         self.ticker = company_name
 
         # Resolve any pending memory-log entries for this ticker before the pipeline runs.

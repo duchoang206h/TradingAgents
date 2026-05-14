@@ -40,6 +40,9 @@ def test_propagate_stream_streams_and_persists_final_state(tmp_path):
         "results_dir": str(tmp_path),
     }
     graph.log_states_dict = {}
+    graph._log_state.side_effect = lambda trade_date, final_state: (
+        TradingAgentsGraph._log_state(graph, trade_date, final_state)
+    )
     graph._checkpointer_ctx = None
     graph.memory_log.get_past_context.return_value = "prior decisions"
     graph.propagator.create_initial_state.return_value = {"initial": "state"}

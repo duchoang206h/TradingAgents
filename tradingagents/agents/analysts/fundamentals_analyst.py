@@ -8,27 +8,42 @@ from tradingagents.agents.utils.agent_utils import (
     get_insider_transactions,
     get_language_instruction,
 )
-from tradingagents.dataflows.config import get_config
+from tradingagents.dataflows.crypto_utils import is_crypto_symbol
 
 
 def create_fundamentals_analyst(llm):
     def fundamentals_analyst_node(state):
         current_date = state["trade_date"]
-        instrument_context = build_instrument_context(state["company_of_interest"])
+        ticker = state["company_of_interest"]
+        crypto_mode = is_crypto_symbol(ticker)
+        instrument_context = build_instrument_context(ticker)
 
-        tools = [
-            get_fundamentals,
-            get_balance_sheet,
-            get_cashflow,
-            get_income_statement,
-        ]
+        tools = [get_fundamentals]
+        if not crypto_mode:
+            tools.extend([get_balance_sheet, get_cashflow, get_income_statement])
 
-        system_message = (
-            "You are a researcher tasked with analyzing fundamental information over the past week about a company. Please write a comprehensive report of the company's fundamental information such as financial documents, company profile, basic company financials, and company financial history to gain a full view of the company's fundamental information to inform traders. Make sure to include as much detail as possible. Provide specific, actionable insights with supporting evidence to help traders make informed decisions."
-            + " Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."
-            + " Use the available tools: `get_fundamentals` for comprehensive company analysis, `get_balance_sheet`, `get_cashflow`, and `get_income_statement` for specific financial statements."
-            + get_language_instruction(),
-        )
+        if crypto_mode:
+            system_message = (
+                "You are a researcher tasked with analyzing fundamental information "
+                "for a crypto asset over the past week. Treat the asset as a "
+                "tradable digital asset, not a company. Focus on market cap, "
+                "circulating/supply context when available, liquidity, volatility, "
+                "network/protocol activity, tokenomics, supply unlock risk, staking "
+                "or yield mechanics, ecosystem traction, exchange/regulatory risks, "
+                "and BTC/ETH correlation. Do not request balance sheets, cash-flow "
+                "statements, income statements, EPS, PE ratios, dividends, or insider "
+                "transactions. Use `get_fundamentals` only, then clearly state data "
+                "gaps where on-chain or tokenomics feeds are not configured yet. "
+                "Append a Markdown table at the end of the report."
+                + get_language_instruction()
+            )
+        else:
+            system_message = (
+                "You are a researcher tasked with analyzing fundamental information over the past week about a company. Please write a comprehensive report of the company's fundamental information such as financial documents, company profile, basic company financials, and company financial history to gain a full view of the company's fundamental information to inform traders. Make sure to include as much detail as possible. Provide specific, actionable insights with supporting evidence to help traders make informed decisions."
+                + " Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."
+                + " Use the available tools: `get_fundamentals` for comprehensive company analysis, `get_balance_sheet`, `get_cashflow`, and `get_income_statement` for specific financial statements."
+                + get_language_instruction()
+            )
 
         prompt = ChatPromptTemplate.from_messages(
             [

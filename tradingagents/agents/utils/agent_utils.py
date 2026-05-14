@@ -1,4 +1,5 @@
 from langchain_core.messages import HumanMessage, RemoveMessage
+from tradingagents.dataflows.crypto_utils import crypto_base_symbol, is_crypto_symbol
 
 # Import tools from separate utility files
 from tradingagents.agents.utils.core_stock_tools import (
@@ -38,6 +39,18 @@ def get_language_instruction() -> str:
 
 def build_instrument_context(ticker: str) -> str:
     """Describe the exact instrument so agents preserve exchange-qualified tickers."""
+    if is_crypto_symbol(ticker):
+        base = crypto_base_symbol(ticker)
+        return (
+            f"The instrument to analyze is the crypto asset `{ticker}` "
+            f"(base asset `{base}`). Use this exact ticker in every tool call, "
+            "report, and recommendation. Treat it as a tradable digital asset, "
+            "not a company: do not assume equity financial statements, insider "
+            "transactions, EPS, PE ratio, or dividend data exist. Prefer crypto "
+            "drivers such as liquidity, volatility, supply, tokenomics, network "
+            "activity, funding/derivatives pressure, exchange flows, regulation, "
+            "BTC/ETH correlation, and macro liquidity."
+        )
     return (
         f"The instrument to analyze is `{ticker}`. "
         "Use this exact ticker in every tool call, report, and recommendation, "

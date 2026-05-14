@@ -592,6 +592,18 @@ class TestDeferredReflection:
         }
         assert TradingAgentsGraph._resolve_benchmark(mock_graph, "7203.t") == "^N225"
 
+    def test_resolve_benchmark_crypto_uses_crypto_baseline(self):
+        """Crypto assets use crypto benchmarks instead of the equity SPY fallback."""
+        mock_graph = MagicMock(spec=TradingAgentsGraph)
+        mock_graph.config = {
+            "benchmark_ticker": None,
+            "benchmark_map": {"": "SPY"},
+            "crypto_benchmark_ticker": "BTC-USD",
+            "crypto_btc_benchmark_ticker": "ETH-USD",
+        }
+        assert TradingAgentsGraph._resolve_benchmark(mock_graph, "SOL-USD") == "BTC-USD"
+        assert TradingAgentsGraph._resolve_benchmark(mock_graph, "BTC-USD") == "ETH-USD"
+
     def test_reflector_includes_benchmark_in_label(self):
         """benchmark_name appears in the prompt label, not 'SPY' hardcoded."""
         mock_llm = MagicMock()

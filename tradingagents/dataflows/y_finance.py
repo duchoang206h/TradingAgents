@@ -5,6 +5,7 @@ import pandas as pd
 import yfinance as yf
 import os
 from .stockstats_utils import StockstatsUtils, _clean_dataframe, yf_retry, load_ohlcv, filter_financials_by_date
+from .crypto_utils import is_crypto_symbol
 
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -249,7 +250,7 @@ def get_fundamentals(
     ticker: Annotated[str, "ticker symbol of the company"],
     curr_date: Annotated[str, "current date (not used for yfinance)"] = None
 ):
-    """Get company fundamentals overview from yfinance."""
+    """Get company or crypto fundamentals overview from yfinance."""
     try:
         ticker_obj = yf.Ticker(ticker.upper())
         info = yf_retry(lambda: ticker_obj.info)
@@ -257,7 +258,29 @@ def get_fundamentals(
         if not info:
             return f"No fundamentals data found for symbol '{ticker}'"
 
-        fields = [
+        if is_crypto_symbol(ticker):
+            fields = [
+                ("Name", info.get("longName") or info.get("shortName")),
+                ("Quote Currency", info.get("currency")),
+                ("Market Cap", info.get("marketCap")),
+                ("Circulating Supply", info.get("circulatingSupply")),
+                ("Total Supply", info.get("totalSupply")),
+                ("Max Supply", info.get("maxSupply")),
+                ("Volume 24h", info.get("volume24Hr") or info.get("regularMarketVolume")),
+                ("52 Week High", info.get("fiftyTwoWeekHigh")),
+                ("52 Week Low", info.get("fiftyTwoWeekLow")),
+                ("50 Day Average", info.get("fiftyDayAverage")),
+                ("200 Day Average", info.get("twoHundredDayAverage")),
+                ("Beta", info.get("beta")),
+            ]
+            header = f"# Crypto Asset Fundamentals for {ticker.upper()}\n"
+            header += (
+                "# Data note: yfinance provides market metadata only; on-chain, "
+                "token unlock, protocol revenue, and derivatives feeds are not "
+                "configured in this run.\n"
+            )
+        else:
+            fields = [
             ("Name", info.get("longName")),
             ("Sector", info.get("sector")),
             ("Industry", info.get("industry")),
@@ -286,14 +309,14 @@ def get_fundamentals(
             ("Current Ratio", info.get("currentRatio")),
             ("Book Value", info.get("bookValue")),
             ("Free Cash Flow", info.get("freeCashflow")),
-        ]
+            ]
+            header = f"# Company Fundamentals for {ticker.upper()}\n"
 
         lines = []
         for label, value in fields:
             if value is not None:
                 lines.append(f"{label}: {value}")
 
-        header = f"# Company Fundamentals for {ticker.upper()}\n"
         header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
 
         return header + "\n".join(lines)
