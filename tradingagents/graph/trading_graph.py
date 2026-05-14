@@ -380,6 +380,74 @@ class TradingAgentsGraph:
 
         return final_state, self.process_signal(final_state["final_trade_decision"])
 
+    def propagate_stream(self, company_name, trade_date, callbacks: Optional[List] = None):
+        """Stream graph state updates while preserving propagate side effects."""
+        self.ticker = company_name
+
+        # Resolve any pending memory-log entries for this ticker before the pipeline runs.
+        self._resolve_pending_entries(company_name)
+
+        # Recompile with a checkpointer if the user opted in.
+        if self.config.get("checkpoint_enabled"):
+            self._checkpointer_ctx = get_checkpointer(
+                self.config["data_cache_dir"], company_name
+            )
+            saver = self._checkpointer_ctx.__enter__()
+            self.graph = self.workflow.compile(checkpointer=saver)
+
+            step = checkpoint_step(
+                self.config["data_cache_dir"], company_name, str(trade_date)
+            )
+            if step is not None:
+                logger.info(
+                    "Resuming from step %d for %s on %s", step, company_name, trade_date
+                )
+            else:
+                logger.info("Starting fresh for %s on %s", company_name, trade_date)
+
+        try:
+            past_context = self.memory_log.get_past_context(company_name)
+            init_agent_state = self.propagator.create_initial_state(
+                company_name, trade_date, past_context=past_context
+            )
+            args = self.propagator.get_graph_args(callbacks=callbacks)
+
+            # Inject thread_id so same ticker+date resumes, different date starts fresh.
+            if self.config.get("checkpoint_enabled"):
+                tid = thread_id(company_name, str(trade_date))
+                args.setdefault("config", {}).setdefault("configurable", {})[
+                    "thread_id"
+                ] = tid
+
+            final_state = {}
+            for chunk in self.graph.stream(init_agent_state, **args):
+                final_state.update(chunk)
+                yield chunk
+
+            # Store current state for reflection.
+            self.curr_state = final_state
+
+            # Log state to disk.
+            self._log_state(trade_date, final_state)
+
+            # Store decision for deferred reflection on the next same-ticker run.
+            self.memory_log.store_decision(
+                ticker=company_name,
+                trade_date=trade_date,
+                final_trade_decision=final_state["final_trade_decision"],
+            )
+
+            # Clear checkpoint on successful completion to avoid stale state.
+            if self.config.get("checkpoint_enabled"):
+                clear_checkpoint(
+                    self.config["data_cache_dir"], company_name, str(trade_date)
+                )
+        finally:
+            if self._checkpointer_ctx is not None:
+                self._checkpointer_ctx.__exit__(None, None, None)
+                self._checkpointer_ctx = None
+                self.graph = self.workflow.compile()
+
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file."""
         self.log_states_dict[str(trade_date)] = {
