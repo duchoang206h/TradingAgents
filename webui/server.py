@@ -21,6 +21,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 from tradingagents.default_config import DEFAULT_CONFIG  # noqa: E402
+from tradingagents.dataflows.crypto_utils import normalize_crypto_symbol  # noqa: E402
 from tradingagents.graph.trading_graph import TradingAgentsGraph  # noqa: E402
 from tradingagents.llm_clients.model_catalog import MODEL_OPTIONS  # noqa: E402
 
@@ -131,6 +132,7 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
 
     def run() -> None:
         try:
+            ticker = normalize_crypto_symbol(req.ticker)
             config = DEFAULT_CONFIG.copy()
             config["llm_provider"]          = req.provider
             config["quick_think_llm"]       = req.quick_model
@@ -148,10 +150,10 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
                 config=config,
                 callbacks=[stats],
             )
-            _push({"type": "status", "message": f"Analyzing {req.ticker} on {req.date}…"})
+            _push({"type": "status", "message": f"Analyzing {ticker} on {req.date}…"})
 
             prev: dict[str, str] = {}
-            for chunk in ta.propagate_stream(req.ticker, req.date, callbacks=[stats]):
+            for chunk in ta.propagate_stream(ticker, req.date, callbacks=[stats]):
                 for field, agent_name in _REPORT_FIELDS.items():
                     val = chunk.get(field) or ""
                     if val and val != prev.get(field, ""):
@@ -164,7 +166,7 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
             _push({
                 "type": "complete",
                 "decision": decision,
-                "ticker": req.ticker,
+                "ticker": ticker,
                 "date": req.date,
                 "stats": stats.get_stats(),
             })

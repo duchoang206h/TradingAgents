@@ -21,21 +21,21 @@
       --accent-hover: #2563eb;
     }
     [data-theme="light"] {
-      --bg-primary: #f6f8fb;
+      --bg-primary: #f5f5f5;
       --bg-secondary: #ffffff;
       --bg-input: #ffffff;
-      --bg-code: #f1f5f9;
-      --border-primary: #dbe3ee;
-      --border-secondary: #cbd5e1;
-      --text-primary: #0f172a;
-      --text-secondary: #334155;
-      --text-muted: #64748b;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
+      --bg-code: #f3f3f3;
+      --border-primary: #d4d4d4;
+      --border-secondary: #c8c8c8;
+      --text-primary: #333333;
+      --text-secondary: #424242;
+      --text-muted: #6a6a6a;
+      --accent: #007acc;
+      --accent-hover: #006ab1;
     }
     body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Inter', system-ui, sans-serif; transition: background-color 0.3s, color 0.3s; }
     .glass { background: var(--bg-secondary); border: 1px solid var(--border-primary); backdrop-filter: blur(12px); }
-    [data-theme="light"] .glass { box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+    [data-theme="light"] .glass { box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
     .theme-primary { color: var(--text-primary); }
     .theme-secondary { color: var(--text-secondary); }
     .theme-muted { color: var(--text-muted); }
@@ -48,18 +48,20 @@
     @keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     .prose-dark h1,.prose-dark h2,.prose-dark h3 { color: var(--accent); font-weight:600; margin:1rem 0 .5rem; }
     .prose-dark h1{font-size:1.25rem} .prose-dark h2{font-size:1.1rem} .prose-dark h3{font-size:1rem}
+    .prose-dark { overflow-wrap:anywhere; word-break:normal; }
     .prose-dark p { color: var(--text-secondary); margin:.5rem 0; line-height:1.7; }
     .prose-dark ul,.prose-dark ol { color: var(--text-secondary); padding-left:1.5rem; margin:.5rem 0; }
     .prose-dark li { margin:.25rem 0; }
     .prose-dark strong { color: var(--text-primary); }
-    .prose-dark code { background: var(--bg-code); color: #0369a1; padding:.1rem .3rem; border-radius:.25rem; font-size:.85em; }
-    .prose-dark pre { background: var(--bg-code); padding:1rem; border-radius:.5rem; overflow-x:auto; margin:.75rem 0; }
+    .prose-dark code { background: var(--bg-code); color: var(--accent); padding:.1rem .3rem; border-radius:.25rem; font-size:.85em; white-space:pre-wrap; }
+    .prose-dark pre { background: var(--bg-code); padding:1rem; border-radius:.5rem; overflow-x:auto; white-space:pre-wrap; margin:.75rem 0; }
     .prose-dark blockquote { border-left:3px solid var(--accent); padding-left:1rem; color: var(--text-muted); }
     .prose-dark hr { border-color: var(--border-secondary); margin:1rem 0; }
-    .prose-dark table { width:100%; border-collapse:collapse; margin:.75rem 0; }
+    .prose-dark table { width:100%; border-collapse:collapse; margin:.75rem 0; table-layout:fixed; }
     .prose-dark th { background: var(--bg-code); color: var(--accent); padding:.5rem .75rem; text-align:left; border:1px solid var(--border-secondary); }
-    .prose-dark td { padding:.5rem .75rem; border:1px solid var(--bg-code); color: var(--text-secondary); }
+    .prose-dark td { padding:.5rem .75rem; border:1px solid var(--bg-code); color: var(--text-secondary); overflow-wrap:anywhere; }
     .prose-dark tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
+    [data-theme="light"] .prose-dark tr:nth-child(even) td { background:#fafafa; }
     select,input { background: var(--bg-input) !important; color: var(--text-primary) !important; border-color: var(--border-secondary) !important; }
     select option { background: var(--bg-input); color: var(--text-primary); }
     ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background: var(--bg-primary); } ::-webkit-scrollbar-thumb { background: var(--border-secondary); border-radius:3px; }
@@ -84,6 +86,8 @@
       border: 1px solid rgba(16,185,129,0.42);
     }
     [data-theme="light"] .stage-done { color: #047857; }
+    #activityLog { overflow-wrap:anywhere; }
+    #tabContent { min-width:0; }
     .accordion-content { max-height:0; overflow:hidden; transition:max-height .4s ease; }
     .accordion-content.open { max-height:9999px; }
     /* Theme toggle button */
@@ -123,7 +127,7 @@
       <div class="space-y-3">
         <div>
           <label class="text-xs theme-muted block mb-1">Ticker Symbol</label>
-          <input id="ticker" type="text" value="NVDA" placeholder="e.g. NVDA, SPY, AAPL"
+          <input id="ticker" type="text" value="NVDA" placeholder="e.g. NVDA, SPY, BTC, ETH-USD"
             class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500 transition" />
         </div>
         <div>

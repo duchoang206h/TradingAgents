@@ -17,6 +17,8 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_MAX_RISK_ROUNDS":      "max_risk_discuss_rounds",
     "TRADINGAGENTS_CHECKPOINT_ENABLED":   "checkpoint_enabled",
     "TRADINGAGENTS_BENCHMARK_TICKER":     "benchmark_ticker",
+    "TRADINGAGENTS_CRYPTO_QUOTE_CURRENCY": "crypto_quote_currency",
+    "TRADINGAGENTS_CRYPTO_BENCHMARK_TICKER": "crypto_benchmark_ticker",
 }
 
 
@@ -70,6 +72,13 @@ DEFAULT_CONFIG = _apply_env_overrides({
     # Output language for analyst reports and final decision
     # Internal agent debate stays in English for reasoning quality
     "output_language": "English",
+    # Crypto support. Bare common crypto symbols (BTC, ETH, SOL, etc.) are
+    # normalised to Yahoo Finance pairs using this quote currency.
+    "crypto_quote_currency": "USD",
+    # Default alpha benchmark for crypto assets. BTC benchmarks against ETH so
+    # BTC runs still get a relative return instead of comparing BTC to itself.
+    "crypto_benchmark_ticker": "BTC-USD",
+    "crypto_btc_benchmark_ticker": "ETH-USD",
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
