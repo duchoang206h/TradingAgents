@@ -69,8 +69,8 @@ DEFAULT_CONFIG = _apply_env_overrides({
     # Checkpoint/resume: when True, LangGraph saves state after each node
     # so a crashed run can resume from the last successful step.
     "checkpoint_enabled": False,
-    # Output language for analyst reports and final decision
-    # Internal agent debate stays in English for reasoning quality
+    # Presentation language for returned, displayed, and streamed reports.
+    # Agents, graph state, signals, logs, and memory remain canonical English.
     "output_language": "English",
     # Crypto support. Bare common crypto symbols (BTC, ETH, SOL, etc.) are
     # normalised to Yahoo Finance pairs using this quote currency.

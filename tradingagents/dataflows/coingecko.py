@@ -34,6 +34,7 @@ _COMMON_COIN_IDS = {
     "ETH": "ethereum",
     "FIL": "filecoin",
     "HBAR": "hedera-hashgraph",
+    "HYPE": "hyperliquid",
     "ICP": "internet-computer",
     "LINK": "chainlink",
     "LTC": "litecoin",

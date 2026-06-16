@@ -157,6 +157,8 @@ For enterprise providers (e.g. Azure OpenAI, AWS Bedrock), copy `.env.enterprise
 
 For local models, configure Ollama with `llm_provider: "ollama"`. The default endpoint is `http://localhost:11434/v1`; set `OLLAMA_BASE_URL` to point at a remote `ollama-serve`. Pull models with `ollama pull <name>`, and pick "Custom model ID" in the CLI for any model not listed by default.
 
+For OpenRouter, configure `llm_provider: "openrouter"` and use model IDs such as `anthropic/claude-sonnet-4.6`. The CLI and WebUI load popular compatible models dynamically, while custom model IDs remain available. TradingAgents sends OpenRouter's optional attribution headers by default; override them with `OPENROUTER_HTTP_REFERER` and `OPENROUTER_APP_TITLE`.
+
 Alternatively, copy `.env.example` to `.env` and fill in your keys:
 ```bash
 cp .env.example .env
@@ -221,8 +223,12 @@ The WebUI exposes the same configuration options as the CLI and Python API:
 | **Quick Model** | Model for fast tasks (analysts, trader) |
 | **Deep Model** | Model for complex reasoning (research manager, portfolio manager) |
 | **Debate Rounds** | Number of bull/bear researcher debate iterations |
-| **Language** | Output language for reports and decisions |
+| **Language** | Presentation language for reports and decisions, including Vietnamese |
 | **Checkpoint** | Enable resume from last successful step on crash/interrupt |
+
+Language selection is applied as post-processing after each report is
+generated. Agent prompts, internal graph state, signal extraction, logs, and
+trading memory remain in canonical English.
 
 ### API Endpoints
 

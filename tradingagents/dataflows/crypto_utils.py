@@ -32,9 +32,31 @@ COMMON_CRYPTO_BASES = {
     "USDT",
     "XLM",
     "XRP",
+    "HYPE",
 }
 
 CRYPTO_QUOTES = {"USD", "USDT", "USDC", "BTC", "ETH", "EUR"}
+
+# Some crypto assets need provider-specific Yahoo Finance bases that do not
+# match the canonical market ticker. Keep prompts and crypto lookups canonical,
+# but route OHLCV/fundamentals calls to Yahoo's actual symbol.
+YFINANCE_CRYPTO_BASE_ALIASES = {
+    "HYPE": "HYPE32196",
+}
+YFINANCE_CRYPTO_ALIAS_TO_BASE = {
+    provider_base: canonical_base
+    for canonical_base, provider_base in YFINANCE_CRYPTO_BASE_ALIASES.items()
+}
+
+
+def _canonical_crypto_base(base: str) -> str:
+    return YFINANCE_CRYPTO_ALIAS_TO_BASE.get(base, base)
+
+
+def _provider_crypto_base(base: str, quote: str) -> str:
+    if quote == "USD":
+        return YFINANCE_CRYPTO_BASE_ALIASES.get(base, base)
+    return base
 
 
 def split_crypto_symbol(symbol: str) -> tuple[str, str | None]:
@@ -46,12 +68,14 @@ def split_crypto_symbol(symbol: str) -> tuple[str, str | None]:
     """
     cleaned = symbol.strip().upper().replace("/", "-")
     if "-" in cleaned:
-        base, quote = cleaned.split("-", 1)
+        raw_base, quote = cleaned.split("-", 1)
+        base = _canonical_crypto_base(raw_base)
         if base in COMMON_CRYPTO_BASES and quote in CRYPTO_QUOTES:
             return base, quote
         return cleaned, None
-    if cleaned in COMMON_CRYPTO_BASES:
-        return cleaned, None
+    base = _canonical_crypto_base(cleaned)
+    if base in COMMON_CRYPTO_BASES:
+        return base, None
     return cleaned, None
 
 
@@ -66,10 +90,25 @@ def normalize_crypto_symbol(symbol: str, quote_currency: str = "USD") -> str:
     cleaned = symbol.strip().upper().replace("/", "-")
     base, quote = split_crypto_symbol(cleaned)
     if quote:
-        return f"{base}-{quote}"
+        return f"{_provider_crypto_base(base, quote)}-{quote}"
     if base in COMMON_CRYPTO_BASES:
-        return f"{base}-{quote_currency.strip().upper()}"
+        quote = quote_currency.strip().upper()
+        return f"{_provider_crypto_base(base, quote)}-{quote}"
     return cleaned
+
+
+def social_crypto_symbol(symbol: str) -> str:
+    """Return the canonical symbol to use in text/social searches."""
+    if is_crypto_symbol(symbol):
+        return crypto_base_symbol(symbol)
+    return symbol.strip().upper()
+
+
+def stocktwits_symbol(symbol: str) -> str:
+    """Return the symbol format expected by StockTwits streams."""
+    if is_crypto_symbol(symbol):
+        return f"{crypto_base_symbol(symbol)}.X"
+    return symbol.strip().upper()
 
 
 def crypto_base_symbol(symbol: str) -> str:

@@ -10,6 +10,10 @@ from cli.models import AnalystType
 from tradingagents.dataflows.crypto_utils import normalize_crypto_symbol
 from tradingagents.llm_clients.api_key_env import get_api_key_env
 from tradingagents.llm_clients.model_catalog import get_model_options
+from tradingagents.llm_clients.openrouter_catalog import (
+    OpenRouterCatalogError,
+    get_openrouter_model_options,
+)
 
 console = Console()
 
@@ -27,7 +31,8 @@ def get_ticker() -> str:
     """Prompt the user to enter a ticker symbol."""
     ticker = questionary.text(
         f"Enter the exact ticker symbol to analyze ({TICKER_INPUT_EXAMPLES}):",
-        validate=lambda x: len(x.strip()) > 0 or "Please enter a valid ticker symbol.",
+        validate=lambda x: len(
+            x.strip()) > 0 or "Please enter a valid ticker symbol.",
         style=questionary.Style(
             [
                 ("text", "fg:green"),
@@ -93,7 +98,8 @@ def select_analysts() -> List[AnalystType]:
             questionary.Choice(display, value=value) for display, value in ANALYST_ORDER
         ],
         instruction="\n- Press Space to select/unselect analysts\n- Press 'a' to select/unselect all\n- Press Enter when done",
-        validate=lambda x: len(x) > 0 or "You must select at least one analyst.",
+        validate=lambda x: len(
+            x) > 0 or "You must select at least one analyst.",
         style=questionary.Style(
             [
                 ("checkbox-selected", "fg:green"),
@@ -143,28 +149,25 @@ def select_research_depth() -> int:
     return choice
 
 
-def _fetch_openrouter_models() -> List[Tuple[str, str]]:
-    """Fetch available models from the OpenRouter API."""
-    import requests
+def _fetch_openrouter_models(mode: str) -> List[Tuple[str, str]]:
+    """Fetch OpenRouter models compatible with the requested graph role."""
     try:
-        resp = requests.get("https://openrouter.ai/api/v1/models", timeout=10)
-        resp.raise_for_status()
-        models = resp.json().get("data", [])
-        return [(m.get("name") or m["id"], m["id"]) for m in models]
-    except Exception as e:
-        console.print(f"\n[yellow]Could not fetch OpenRouter models: {e}[/yellow]")
-        return []
+        return get_openrouter_model_options(mode)
+    except OpenRouterCatalogError as exc:
+        console.print(
+            f"\n[yellow]Could not fetch OpenRouter models: {exc}[/yellow]"
+        )
+        return [("Custom model ID", "custom")]
 
 
-def select_openrouter_model() -> str:
-    """Select an OpenRouter model from the newest available, or enter a custom ID."""
-    models = _fetch_openrouter_models()
+def select_openrouter_model(mode: str) -> str:
+    """Select a compatible OpenRouter model, or enter a custom ID."""
+    models = _fetch_openrouter_models(mode)
 
-    choices = [questionary.Choice(name, value=mid) for name, mid in models[:5]]
-    choices.append(questionary.Choice("Custom model ID", value="custom"))
+    choices = [questionary.Choice(name, value=mid) for name, mid in models]
 
     choice = questionary.select(
-        "Select OpenRouter Model (latest available):",
+        f"Select OpenRouter {mode.title()} Model (compatible models):",
         choices=choices,
         instruction="\n- Use arrow keys to navigate\n- Press Enter to select",
         style=questionary.Style([
@@ -177,7 +180,8 @@ def select_openrouter_model() -> str:
     if choice is None or choice == "custom":
         return questionary.text(
             "Enter OpenRouter model ID (e.g. google/gemma-4-26b-a4b-it):",
-            validate=lambda x: len(x.strip()) > 0 or "Please enter a model ID.",
+            validate=lambda x: len(
+                x.strip()) > 0 or "Please enter a model ID.",
         ).ask().strip()
 
     return choice
@@ -194,12 +198,13 @@ def _prompt_custom_model_id() -> str:
 def _select_model(provider: str, mode: str) -> str:
     """Select a model for the given provider and mode (quick/deep)."""
     if provider.lower() == "openrouter":
-        return select_openrouter_model()
+        return select_openrouter_model(mode)
 
     if provider.lower() == "azure":
         return questionary.text(
             f"Enter Azure deployment name ({mode}-thinking):",
-            validate=lambda x: len(x.strip()) > 0 or "Please enter a deployment name.",
+            validate=lambda x: len(
+                x.strip()) > 0 or "Please enter a deployment name.",
         ).ask().strip()
 
     choice = questionary.select(
@@ -219,7 +224,8 @@ def _select_model(provider: str, mode: str) -> str:
     ).ask()
 
     if choice is None:
-        console.print(f"\n[red]No {mode} thinking llm engine selected. Exiting...[/red]")
+        console.print(
+            f"\n[red]No {mode} thinking llm engine selected. Exiting...[/red]")
         exit(1)
 
     if choice == "custom":
@@ -237,12 +243,14 @@ def select_deep_thinking_agent(provider) -> str:
     """Select deep thinking llm engine using an interactive selection."""
     return _select_model(provider, "deep")
 
+
 def select_llm_provider() -> tuple[str, str | None]:
     """Select the LLM provider and its API endpoint."""
     # Ollama users can point at a remote ollama-serve via OLLAMA_BASE_URL
     # (convention from the broader Ollama ecosystem); falls back to the
     # localhost default when unset.
-    ollama_url = os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434/v1"
+    ollama_url = os.environ.get(
+        "OLLAMA_BASE_URL") or "http://localhost:11434/v1"
     # (display_name, provider_key, base_url)
     PROVIDERS = [
         ("OpenAI", "openai", "https://api.openai.com/v1"),
@@ -273,7 +281,7 @@ def select_llm_provider() -> tuple[str, str | None]:
             ]
         ),
     ).ask()
-    
+
     if choice is None:
         console.print("\n[red]No LLM provider selected. Exiting...[/red]")
         exit(1)
@@ -380,11 +388,13 @@ def ask_qwen_region() -> tuple[str, str]:
         choices=[
             questionary.Choice(
                 "International — dashscope-intl.aliyuncs.com (uses DASHSCOPE_API_KEY)",
-                value=("qwen", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
+                value=(
+                    "qwen", "https://ws-fa95hjm3yg3jt6yd.ap-southeast-1.maas.aliyuncs.com/api/v1/"),
             ),
             questionary.Choice(
                 "China — dashscope.aliyuncs.com (uses DASHSCOPE_CN_API_KEY)",
-                value=("qwen-cn", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+                value=(
+                    "qwen-cn", "https://ws-fa95hjm3yg3jt6yd.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"),
             ),
         ],
         style=questionary.Style([
@@ -427,7 +437,7 @@ def confirm_ollama_endpoint(url: str) -> None:
 
     Surfaces three things the user benefits from seeing before model
     selection: which URL we'll actually hit, where it came from
-    (\`OLLAMA_BASE_URL\` vs default), and a soft warning if the URL is
+    (``OLLAMA_BASE_URL`` vs default), and a soft warning if the URL is
     missing the scheme/port that ollama-serve expects. The warning is
     advisory only — we don't reject malformed input, since the user may
     be doing something deliberately unusual (e.g. a reverse-proxy path).
@@ -501,6 +511,7 @@ def ask_output_language() -> str:
         "Select Output Language:",
         choices=[
             questionary.Choice("English (default)", "English"),
+            questionary.Choice("Vietnamese (Tiếng Việt)", "Vietnamese"),
             questionary.Choice("Chinese (中文)", "Chinese"),
             questionary.Choice("Japanese (日本語)", "Japanese"),
             questionary.Choice("Korean (한국어)", "Korean"),
@@ -523,7 +534,8 @@ def ask_output_language() -> str:
     if choice == "custom":
         return questionary.text(
             "Enter language name (e.g. Turkish, Vietnamese, Thai, Indonesian):",
-            validate=lambda x: len(x.strip()) > 0 or "Please enter a language name.",
+            validate=lambda x: len(
+                x.strip()) > 0 or "Please enter a language name.",
         ).ask().strip()
 
     return choice

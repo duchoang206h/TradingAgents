@@ -51,6 +51,7 @@ def test_resolve_coin_id_uses_common_crypto_map_without_network(monkeypatch):
     monkeypatch.setattr(coingecko, "_fetch_json", fail_fetch)
 
     assert coingecko._resolve_coin_id("ETH-USD", timeout=0.1) == "ethereum"
+    assert coingecko._resolve_coin_id("HYPE32196-USD", timeout=0.1) == "hyperliquid"
 
 
 @pytest.mark.unit
