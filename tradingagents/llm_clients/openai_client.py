@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from .api_key_env import get_api_key_env
 from .base_client import BaseLLMClient, normalize_content
 from .capabilities import get_capabilities
+from .openrouter_catalog import get_openrouter_attribution_headers
 from .validators import validate_model
 
 
@@ -130,10 +131,21 @@ class MinimaxChatOpenAI(NormalizedChatOpenAI):
         return payload
 
 
+class OpenRouterChatOpenAI(NormalizedChatOpenAI):
+    """OpenRouter client using its cross-provider structured-output format."""
+
+    def with_structured_output(self, schema, *, method=None, **kwargs):
+        kwargs.setdefault("strict", True)
+        return super().with_structured_output(
+            schema, method=method or "json_schema", **kwargs
+        )
+
+
 # Kwargs forwarded from user config to ChatOpenAI
 _PASSTHROUGH_KWARGS = (
     "timeout", "max_retries", "reasoning_effort",
     "api_key", "callbacks", "http_client", "http_async_client",
+    "default_headers", "extra_body",
 )
 
 # Provider base URLs. API-key env vars live in api_key_env.PROVIDER_API_KEY_ENV
@@ -221,6 +233,17 @@ class OpenAIClient(BaseLLMClient):
             if key in self.kwargs:
                 llm_kwargs[key] = self.kwargs[key]
 
+        if self.provider == "openrouter":
+            headers = get_openrouter_attribution_headers()
+            headers.update(llm_kwargs.get("default_headers") or {})
+            llm_kwargs["default_headers"] = headers
+
+            extra_body = dict(llm_kwargs.get("extra_body") or {})
+            provider_options = {"require_parameters": True}
+            provider_options.update(extra_body.get("provider") or {})
+            extra_body["provider"] = provider_options
+            llm_kwargs["extra_body"] = extra_body
+
         # Native OpenAI: use Responses API for consistent behavior across
         # all model families. Third-party providers use Chat Completions.
         if self.provider == "openai":
@@ -232,6 +255,8 @@ class OpenAIClient(BaseLLMClient):
             chat_cls = DeepSeekChatOpenAI
         elif self.provider in ("minimax", "minimax-cn"):
             chat_cls = MinimaxChatOpenAI
+        elif self.provider == "openrouter":
+            chat_cls = OpenRouterChatOpenAI
         else:
             chat_cls = NormalizedChatOpenAI
         return chat_cls(**llm_kwargs)

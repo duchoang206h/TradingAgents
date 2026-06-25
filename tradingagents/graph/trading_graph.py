@@ -4,6 +4,7 @@ import logging
 import os
 from pathlib import Path
 import json
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Dict, Any, Tuple, List, Optional
 
@@ -30,6 +31,7 @@ from tradingagents.dataflows.crypto_utils import (
     is_crypto_symbol,
     normalize_crypto_symbol,
 )
+from tradingagents.output_translation import OutputTranslator
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -71,11 +73,14 @@ class TradingAgentsGraph:
             callbacks: Optional list of callback handlers (e.g., for tracking LLM/tool stats)
         """
         self.debug = debug
-        self.config = config or DEFAULT_CONFIG
+        self.config = deepcopy(config or DEFAULT_CONFIG)
         self.callbacks = callbacks or []
 
-        # Update the interface's config
-        set_config(self.config)
+        # Agents always operate in canonical English. Requested localization is
+        # applied only to presentation copies after each graph node completes.
+        agent_config = deepcopy(self.config)
+        agent_config["output_language"] = "English"
+        set_config(agent_config)
 
         # Create necessary directories
         os.makedirs(self.config["data_cache_dir"], exist_ok=True)
@@ -103,6 +108,10 @@ class TradingAgentsGraph:
 
         self.deep_thinking_llm = deep_client.get_llm()
         self.quick_thinking_llm = quick_client.get_llm()
+        self.output_translator = OutputTranslator(
+            self.quick_thinking_llm,
+            self.config.get("output_language", "English"),
+        )
         
         self.memory_log = TradingMemoryLog(self.config)
 
@@ -390,7 +399,10 @@ class TradingAgentsGraph:
                 self.config["data_cache_dir"], company_name, str(trade_date)
             )
 
-        return final_state, self.process_signal(final_state["final_trade_decision"])
+        return (
+            self.localize_output(final_state),
+            self.process_signal(final_state["final_trade_decision"]),
+        )
 
     def propagate_stream(self, company_name, trade_date, callbacks: Optional[List] = None):
         """Stream graph state updates while preserving propagate side effects."""
@@ -437,7 +449,7 @@ class TradingAgentsGraph:
             final_state = {}
             for chunk in self.graph.stream(init_agent_state, **args):
                 final_state.update(chunk)
-                yield chunk
+                yield self.localize_output(chunk)
 
             # Store current state for reflection.
             self.curr_state = final_state
@@ -508,3 +520,7 @@ class TradingAgentsGraph:
     def process_signal(self, full_signal):
         """Process a signal to extract the core decision."""
         return self.signal_processor.process_signal(full_signal)
+
+    def localize_output(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Return a localized presentation copy without mutating graph state."""
+        return self.output_translator.translate_state(state)

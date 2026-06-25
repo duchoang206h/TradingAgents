@@ -1088,6 +1088,8 @@ def run_analysis(checkpoint: bool = False):
         # Stream the analysis
         trace = []
         for chunk in graph.graph.stream(init_agent_state, **args):
+            localized_chunk = graph.localize_output(chunk)
+
             # Process all messages in chunk, deduplicating by message ID
             for message in chunk.get("messages", []):
                 msg_id = getattr(message, "id", None)
@@ -1108,11 +1110,11 @@ def run_analysis(checkpoint: bool = False):
                             message_buffer.add_tool_call(tool_call.name, tool_call.args)
 
             # Update analyst statuses based on report state (runs on every chunk)
-            update_analyst_statuses(message_buffer, chunk)
+            update_analyst_statuses(message_buffer, localized_chunk)
 
             # Research Team - Handle Investment Debate State
-            if chunk.get("investment_debate_state"):
-                debate_state = chunk["investment_debate_state"]
+            if localized_chunk.get("investment_debate_state"):
+                debate_state = localized_chunk["investment_debate_state"]
                 bull_hist = debate_state.get("bull_history", "").strip()
                 bear_hist = debate_state.get("bear_history", "").strip()
                 judge = debate_state.get("judge_decision", "").strip()
@@ -1136,17 +1138,18 @@ def run_analysis(checkpoint: bool = False):
                     message_buffer.update_agent_status("Trader", "in_progress")
 
             # Trading Team
-            if chunk.get("trader_investment_plan"):
+            if localized_chunk.get("trader_investment_plan"):
                 message_buffer.update_report_section(
-                    "trader_investment_plan", chunk["trader_investment_plan"]
+                    "trader_investment_plan",
+                    localized_chunk["trader_investment_plan"],
                 )
                 if message_buffer.agent_status.get("Trader") != "completed":
                     message_buffer.update_agent_status("Trader", "completed")
                     message_buffer.update_agent_status("Aggressive Analyst", "in_progress")
 
             # Risk Management Team - Handle Risk Debate State
-            if chunk.get("risk_debate_state"):
-                risk_state = chunk["risk_debate_state"]
+            if localized_chunk.get("risk_debate_state"):
+                risk_state = localized_chunk["risk_debate_state"]
                 agg_hist = risk_state.get("aggressive_history", "").strip()
                 con_hist = risk_state.get("conservative_history", "").strip()
                 neu_hist = risk_state.get("neutral_history", "").strip()
@@ -1192,6 +1195,7 @@ def run_analysis(checkpoint: bool = False):
         for chunk in trace:
             final_state.update(chunk)
         decision = graph.process_signal(final_state["final_trade_decision"])
+        localized_final_state = graph.localize_output(final_state)
 
         # Update all agent statuses to completed
         for agent in message_buffer.agent_status:
@@ -1203,8 +1207,11 @@ def run_analysis(checkpoint: bool = False):
 
         # Update final report sections
         for section in message_buffer.report_sections.keys():
-            if section in final_state:
-                message_buffer.update_report_section(section, final_state[section])
+            if section in localized_final_state:
+                message_buffer.update_report_section(
+                    section,
+                    localized_final_state[section],
+                )
 
         update_display(layout, stats_handler=stats_handler, start_time=start_time)
 
@@ -1222,7 +1229,11 @@ def run_analysis(checkpoint: bool = False):
         ).strip()
         save_path = Path(save_path_str)
         try:
-            report_file = save_report_to_disk(final_state, selections["ticker"], save_path)
+            report_file = save_report_to_disk(
+                localized_final_state,
+                selections["ticker"],
+                save_path,
+            )
             console.print(f"\n[green]✓ Report saved to:[/green] {save_path.resolve()}")
             console.print(f"  [dim]Complete report:[/dim] {report_file.name}")
         except Exception as e:
@@ -1231,7 +1242,7 @@ def run_analysis(checkpoint: bool = False):
     # Prompt to display full report
     display_choice = typer.prompt("\nDisplay full report on screen?", default="Y").strip().upper()
     if display_choice in ("Y", "YES", ""):
-        display_complete_report(final_state)
+        display_complete_report(localized_final_state)
 
 
 @app.command()

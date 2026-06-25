@@ -602,6 +602,7 @@ class TestDeferredReflection:
             "crypto_btc_benchmark_ticker": "ETH-USD",
         }
         assert TradingAgentsGraph._resolve_benchmark(mock_graph, "SOL-USD") == "BTC-USD"
+        assert TradingAgentsGraph._resolve_benchmark(mock_graph, "HYPE32196-USD") == "BTC-USD"
         assert TradingAgentsGraph._resolve_benchmark(mock_graph, "BTC-USD") == "ETH-USD"
 
     def test_reflector_includes_benchmark_in_label(self):

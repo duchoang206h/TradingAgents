@@ -6,14 +6,17 @@ Per-ticker SQLite databases so concurrent tickers don't contend.
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
+from langgraph.checkpoint.base import get_checkpoint_metadata
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from tradingagents.dataflows.utils import safe_ticker_component
+from tradingagents.observability.analysis_history import json_safe
 
 
 def _db_path(data_dir: str | Path, ticker: str) -> Path:
@@ -30,13 +33,57 @@ def thread_id(ticker: str, date: str) -> str:
     return hashlib.sha256(f"{ticker.upper()}:{date}".encode()).hexdigest()[:16]
 
 
+class SafeSqliteSaver(SqliteSaver):
+    """SQLite checkpointer that JSON-sanitizes checkpoint metadata.
+
+    LangGraph serializes checkpoint state with its serde, but checkpoint
+    metadata is written with plain ``json.dumps``. Graph node writes can put
+    LangChain messages such as ``AIMessage`` in that metadata, so sanitize the
+    metadata before SQLite writes while leaving checkpoint state untouched.
+    """
+
+    def put(self, config, checkpoint, metadata, new_versions):
+        thread_id_value = config["configurable"]["thread_id"]
+        checkpoint_ns = config["configurable"]["checkpoint_ns"]
+        type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
+        serialized_metadata = json.dumps(
+            json_safe(get_checkpoint_metadata(config, metadata)),
+            ensure_ascii=False,
+        ).encode("utf-8", "ignore")
+        with self.cursor() as cur:
+            cur.execute(
+                "INSERT OR REPLACE INTO checkpoints "
+                "(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, "
+                "type, checkpoint, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(thread_id_value),
+                    checkpoint_ns,
+                    checkpoint["id"],
+                    config["configurable"].get("checkpoint_id"),
+                    type_,
+                    serialized_checkpoint,
+                    serialized_metadata,
+                ),
+            )
+        return {
+            "configurable": {
+                "thread_id": thread_id_value,
+                "checkpoint_ns": checkpoint_ns,
+                "checkpoint_id": checkpoint["id"],
+            }
+        }
+
+
 @contextmanager
-def get_checkpointer(data_dir: str | Path, ticker: str) -> Generator[SqliteSaver, None, None]:
+def get_checkpointer(
+    data_dir: str | Path,
+    ticker: str,
+) -> Generator[SqliteSaver, None, None]:
     """Context manager yielding a SqliteSaver backed by a per-ticker DB."""
     db = _db_path(data_dir, ticker)
     conn = sqlite3.connect(str(db), check_same_thread=False)
     try:
-        saver = SqliteSaver(conn)
+        saver = SafeSqliteSaver(conn)
         saver.setup()
         yield saver
     finally:

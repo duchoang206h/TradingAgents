@@ -1,716 +1,1840 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
   <title>TradingAgents</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
-      --bg-primary: #0f1117;
-      --bg-secondary: rgba(255,255,255,0.04);
-      --bg-input: #1a1f2e;
-      --bg-code: #1e2533;
-      --border-primary: rgba(255,255,255,0.08);
-      --border-secondary: #334155;
-      --text-primary: #e2e8f0;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
+      --bg: #0b0f17;
+      --surface: #111827;
+      --surface-raised: #172033;
+      --surface-soft: #1d293d;
+      --border: #29364c;
+      --border-strong: #3b4b65;
+      --text: #eef4ff;
+      --text-secondary: #b3bfd2;
+      --text-muted: #7f8da4;
+      --primary: #4f8cff;
+      --primary-hover: #6da1ff;
+      --primary-soft: rgba(79, 140, 255, 0.14);
+      --success: #31c48d;
+      --success-soft: rgba(49, 196, 141, 0.14);
+      --warning: #f5b942;
+      --warning-soft: rgba(245, 185, 66, 0.14);
+      --danger: #f87171;
+      --danger-soft: rgba(248, 113, 113, 0.14);
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+      --radius: 14px;
+      --radius-sm: 9px;
     }
+
     [data-theme="light"] {
-      --bg-primary: #f5f5f5;
-      --bg-secondary: #ffffff;
-      --bg-input: #ffffff;
-      --bg-code: #f3f3f3;
-      --border-primary: #d4d4d4;
-      --border-secondary: #c8c8c8;
-      --text-primary: #333333;
-      --text-secondary: #424242;
-      --text-muted: #6a6a6a;
-      --accent: #007acc;
-      --accent-hover: #006ab1;
+      --bg: #f3f6fb;
+      --surface: #ffffff;
+      --surface-raised: #f8faff;
+      --surface-soft: #eef3fa;
+      --border: #dce4f0;
+      --border-strong: #c5d0df;
+      --text: #142033;
+      --text-secondary: #41516a;
+      --text-muted: #687891;
+      --primary: #1769e0;
+      --primary-hover: #0f57bd;
+      --primary-soft: rgba(23, 105, 224, 0.1);
+      --success: #087f5b;
+      --success-soft: rgba(8, 127, 91, 0.1);
+      --warning: #a16207;
+      --warning-soft: rgba(161, 98, 7, 0.1);
+      --danger: #c92a2a;
+      --danger-soft: rgba(201, 42, 42, 0.1);
+      --shadow: 0 14px 36px rgba(36, 53, 78, 0.1);
     }
-    body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Inter', system-ui, sans-serif; transition: background-color 0.3s, color 0.3s; }
-    .glass { background: var(--bg-secondary); border: 1px solid var(--border-primary); backdrop-filter: blur(12px); }
-    [data-theme="light"] .glass { box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
-    .theme-primary { color: var(--text-primary); }
-    .theme-secondary { color: var(--text-secondary); }
-    .theme-muted { color: var(--text-muted); }
-    .theme-border { border-color: var(--border-primary); }
-    .pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .spin { animation: spin 1s linear infinite; }
-    @keyframes spin { to{transform:rotate(360deg)} }
-    .slide-in { animation: slideIn 0.3s ease-out; }
-    @keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    .prose-dark h1,.prose-dark h2,.prose-dark h3 { color: var(--accent); font-weight:600; margin:1rem 0 .5rem; }
-    .prose-dark h1{font-size:1.25rem} .prose-dark h2{font-size:1.1rem} .prose-dark h3{font-size:1rem}
-    .prose-dark { overflow-wrap:anywhere; word-break:normal; }
-    .prose-dark p { color: var(--text-secondary); margin:.5rem 0; line-height:1.7; }
-    .prose-dark ul,.prose-dark ol { color: var(--text-secondary); padding-left:1.5rem; margin:.5rem 0; }
-    .prose-dark li { margin:.25rem 0; }
-    .prose-dark strong { color: var(--text-primary); }
-    .prose-dark code { background: var(--bg-code); color: var(--accent); padding:.1rem .3rem; border-radius:.25rem; font-size:.85em; white-space:pre-wrap; }
-    .prose-dark pre { background: var(--bg-code); padding:1rem; border-radius:.5rem; overflow-x:auto; white-space:pre-wrap; margin:.75rem 0; }
-    .prose-dark blockquote { border-left:3px solid var(--accent); padding-left:1rem; color: var(--text-muted); }
-    .prose-dark hr { border-color: var(--border-secondary); margin:1rem 0; }
-    .prose-dark table { width:100%; border-collapse:collapse; margin:.75rem 0; table-layout:fixed; }
-    .prose-dark th { background: var(--bg-code); color: var(--accent); padding:.5rem .75rem; text-align:left; border:1px solid var(--border-secondary); }
-    .prose-dark td { padding:.5rem .75rem; border:1px solid var(--bg-code); color: var(--text-secondary); overflow-wrap:anywhere; }
-    .prose-dark tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
-    [data-theme="light"] .prose-dark tr:nth-child(even) td { background:#fafafa; }
-    select,input { background: var(--bg-input) !important; color: var(--text-primary) !important; border-color: var(--border-secondary) !important; }
-    select option { background: var(--bg-input); color: var(--text-primary); }
-    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background: var(--bg-primary); } ::-webkit-scrollbar-thumb { background: var(--border-secondary); border-radius:3px; }
-    .tab-btn { color: var(--text-secondary); }
-    .tab-btn:hover { background: var(--bg-code); }
-    .tab-btn.active { background: var(--accent); color: #fff; }
-    .tab-btn { transition:all .2s; }
-    .stage-pending {
-      background: var(--bg-code);
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      transition: background-color 180ms ease, color 180ms ease;
+    }
+    button, input, select { font: inherit; }
+    button, summary, label[for], input[type="checkbox"], input[type="radio"], select { cursor: pointer; }
+    button:disabled, input:disabled, select:disabled { cursor: not-allowed; }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--primary) 42%, transparent);
+      outline-offset: 2px;
+    }
+    .hidden { display: none !important; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 66px;
+      padding: 10px clamp(16px, 4vw, 40px);
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 10px;
+      background: linear-gradient(145deg, var(--primary), #765cff);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .03em;
+      box-shadow: 0 8px 24px rgba(79, 140, 255, .25);
+    }
+    .brand-title { font-size: 15px; font-weight: 750; }
+    .brand-subtitle { color: var(--text-muted); font-size: 11px; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    .icon-button, .secondary-button, .ghost-button, .danger-button, .primary-button {
+      border-radius: var(--radius-sm);
+      transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+    }
+    .icon-button {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+    }
+    .icon-button:hover { border-color: var(--border-strong); background: var(--surface-raised); color: var(--text); }
+    .icon-button svg { width: 18px; height: 18px; }
+    .primary-button, .secondary-button, .ghost-button, .danger-button {
+      min-height: 40px;
+      padding: 9px 14px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .primary-button { background: var(--primary); color: #fff; }
+    .primary-button:hover:not(:disabled) { background: var(--primary-hover); }
+    .secondary-button { border-color: var(--border); background: var(--surface-raised); color: var(--text); }
+    .secondary-button:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-soft); }
+    .ghost-button { background: transparent; color: var(--text-secondary); }
+    .ghost-button:hover:not(:disabled) { background: var(--surface-raised); color: var(--text); }
+    .danger-button { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); background: var(--danger-soft); color: var(--danger); }
+    .danger-button:hover:not(:disabled) { border-color: var(--danger); }
+    button:disabled { opacity: .52; }
+
+    .notice {
+      position: fixed;
+      top: 76px;
+      right: 18px;
+      z-index: 40;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: min(420px, calc(100vw - 36px));
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .notice.error { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface)); }
+    .notice.success { border-color: color-mix(in srgb, var(--success) 55%, var(--border)); }
+    .notice.warning { border-color: color-mix(in srgb, var(--warning) 55%, var(--border)); }
+    .notice-dot { width: 8px; height: 8px; margin-top: 5px; flex: 0 0 auto; border-radius: 999px; background: var(--primary); }
+    .notice.error .notice-dot { background: var(--danger); }
+    .notice.success .notice-dot { background: var(--success); }
+    .notice.warning .notice-dot { background: var(--warning); }
+    .notice-message { flex: 1; }
+    .notice-close { padding: 0; border: 0; background: none; color: var(--text-muted); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 20px;
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      padding: 22px clamp(14px, 3vw, 32px) 44px;
+    }
+    .main-column { min-width: 0; display: grid; align-content: start; gap: 16px; }
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .panel-meta { color: var(--text-muted); font-size: 12px; }
+    .config-panel { position: sticky; top: 88px; align-self: start; overflow: hidden; }
+    .config-heading {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 16px 18px;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+    }
+    .config-heading-copy strong { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+    .config-heading-copy span { color: var(--text-muted); font-size: 11px; }
+    .config-chevron { width: 17px; height: 17px; color: var(--text-muted); transition: transform 160ms ease; }
+    .config-panel.mobile-open .config-chevron { transform: rotate(180deg); }
+    .config-body { max-height: calc(100vh - 145px); overflow-y: auto; padding: 17px; }
+    .config-section { margin: 0 0 20px; padding: 0; border: 0; }
+    .config-section:last-child { margin-bottom: 0; }
+    .section-label {
+      display: block;
+      margin: 0 0 9px;
       color: var(--text-muted);
-      border: 1px solid var(--border-primary);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
     }
-    .stage-running {
-      background: rgba(59,130,246,0.14);
-      color: #60a5fa;
-      border: 1px solid rgba(59,130,246,0.4);
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { min-width: 0; margin-bottom: 11px; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; color: var(--text-secondary); font-size: 12px; font-weight: 650; }
+    .field-hint { color: var(--text-muted); font-size: 10px; font-weight: 500; }
+    input[type="text"], input[type="date"], input[type="number"], select {
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      color: var(--text);
+      font-size: 13px;
     }
-    [data-theme="light"] .stage-running { color: #1d4ed8; }
-    .stage-done {
-      background: rgba(16,185,129,0.14);
-      color: #34d399;
-      border: 1px solid rgba(16,185,129,0.42);
+    input:hover, select:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border-strong)); }
+    input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+    .field-error { min-height: 15px; margin: 4px 0 0; color: var(--danger); font-size: 10px; }
+
+    .preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .preset-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .preset-option span {
+      display: block;
+      padding: 8px 5px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      color: var(--text-secondary);
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
     }
-    [data-theme="light"] .stage-done { color: #047857; }
-    #activityLog { overflow-wrap:anywhere; }
-    #tabContent { min-width:0; }
-    .accordion-content { max-height:0; overflow:hidden; transition:max-height .4s ease; }
-    .accordion-content.open { max-height:9999px; }
-    /* Theme toggle button */
-    .theme-toggle { background: transparent; border: 1px solid var(--border-secondary); border-radius: 0.5rem; padding: 0.5rem; cursor: pointer; color: var(--text-primary); transition: all 0.2s; }
-    .theme-toggle:hover { background: var(--bg-secondary); }
+    .preset-option input:checked + span { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+    .preset-option input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--primary) 42%, transparent); outline-offset: 2px; }
+    .analyst-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .check-card {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 38px;
+      padding: 7px 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .check-card:has(input:checked) { border-color: color-mix(in srgb, var(--primary) 62%, var(--border)); background: var(--primary-soft); color: var(--text); }
+    input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
+
+    .advanced {
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+    }
+    .advanced summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 11px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      list-style: none;
+    }
+    .advanced summary::-webkit-details-marker { display: none; }
+    .advanced summary svg { width: 16px; height: 16px; transition: transform 160ms ease; }
+    .advanced[open] summary svg { transform: rotate(180deg); }
+    .advanced-content { padding: 3px 11px 12px; }
+    .key-note { margin: 7px 0 0; color: var(--text-muted); font-size: 10px; }
+    .switch-row { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 12px; }
+    .config-summary {
+      margin-bottom: 12px;
+      padding: 10px 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .run-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .run-actions .primary-button { width: 100%; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 38px;
+      padding: 0 2px;
+    }
+    .status-copy { display: flex; min-width: 0; align-items: center; gap: 9px; color: var(--text-secondary); font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 999px; background: var(--text-muted); }
+    .status-dot.running { background: var(--primary); box-shadow: 0 0 0 5px var(--primary-soft); }
+    .status-dot.success { background: var(--success); }
+    .status-dot.error { background: var(--danger); }
+    .status-dot.warning { background: var(--warning); }
+    .status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .elapsed { color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .status-actions { display: flex; align-items: center; gap: 6px; }
+
+    .empty-state { padding: clamp(30px, 7vw, 64px) 22px; text-align: center; }
+    .empty-kicker { margin-bottom: 8px; color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .empty-state h1 { max-width: 720px; margin: 0 auto 12px; font-size: clamp(22px, 4vw, 36px); line-height: 1.15; }
+    .empty-state p { max-width: 650px; margin: 0 auto; color: var(--text-secondary); font-size: 13px; }
+
+    .decision-card { overflow: hidden; border-color: color-mix(in srgb, var(--primary) 36%, var(--border)); }
+    .decision-hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: clamp(20px, 4vw, 30px);
+      background: linear-gradient(145deg, var(--primary-soft), transparent 65%);
+    }
+    .eyebrow { margin-bottom: 5px; color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .decision-ticker { margin: 0; font-size: clamp(28px, 5vw, 46px); line-height: 1; }
+    .decision-date { margin-top: 7px; color: var(--text-muted); font-size: 12px; }
+    .rating-badge {
+      min-width: 120px;
+      padding: 12px 18px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      text-align: center;
+      font-size: clamp(18px, 3vw, 26px);
+      font-weight: 850;
+    }
+    .rating-badge.buy, .rating-badge.overweight { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+    .rating-badge.hold { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
+    .rating-badge.sell, .rating-badge.underweight { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+    .decision-body { padding: 0 clamp(20px, 4vw, 30px) 24px; }
+    .decision-summary { max-width: 850px; padding: 18px 0; border-top: 1px solid var(--border); }
+    .metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .metric { min-width: 0; padding: 10px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); }
+    .metric-label { display: block; margin-bottom: 2px; color: var(--text-muted); font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .metric-value { display: block; overflow: hidden; color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .decision-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+
+    .pipeline-body { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 15px; }
+    .pipeline-group { min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); }
+    .pipeline-group-title { margin-bottom: 7px; color: var(--text-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .stage-list { display: grid; gap: 5px; }
+    .stage-pill {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 7px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .stage-indicator { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 999px; background: currentColor; }
+    .stage-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stage-time { margin-left: auto; color: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; opacity: .72; }
+    .stage-pill.running { border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); background: var(--primary-soft); color: var(--primary); }
+    .stage-pill.running .stage-indicator { animation: pulse 1.2s ease-in-out infinite; }
+    .stage-pill.done { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); background: var(--success-soft); color: var(--success); }
+    .stage-pill.error, .stage-pill.cancelled { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); background: var(--danger-soft); color: var(--danger); }
+    .stage-pill.skipped { opacity: .5; }
+
+    .activity-panel { overflow: hidden; }
+    .activity-panel summary { list-style: none; }
+    .activity-panel summary::-webkit-details-marker { display: none; }
+    .activity-log {
+      height: 220px;
+      overflow-y: auto;
+      padding: 12px 16px 16px;
+      color: var(--text-secondary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+    }
+    .activity-event { display: grid; grid-template-columns: 72px 44px minmax(0, 1fr); gap: 7px; padding: 3px 0; overflow-wrap: anywhere; }
+    .activity-time { color: var(--text-muted); }
+    .activity-kind { color: var(--primary); font-weight: 800; }
+    .activity-kind.tool { color: var(--warning); }
+    .activity-kind.done { color: var(--success); }
+
+    .reports-panel { overflow: hidden; }
+    .report-header { flex-wrap: wrap; }
+    .report-tools { display: flex; flex: 1; align-items: center; justify-content: flex-end; gap: 6px; }
+    .report-search-wrap { position: relative; width: min(260px, 100%); }
+    .report-search-wrap input { min-height: 34px; padding-right: 58px; font-size: 11px; }
+    .match-count { position: absolute; top: 50%; right: 9px; color: var(--text-muted); font-size: 9px; transform: translateY(-50%); }
+    .report-tabs { display: flex; gap: 5px; padding: 9px 12px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+    .tab-button {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .tab-button:hover { background: var(--surface-raised); color: var(--text); }
+    .tab-button[aria-selected="true"] { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); background: var(--primary-soft); color: var(--primary); }
+    .report-content { min-height: 220px; padding: clamp(16px, 3vw, 28px); overflow-x: auto; }
+    .report-placeholder { display: grid; min-height: 170px; place-items: center; color: var(--text-muted); font-size: 12px; text-align: center; }
+
+    .report-prose { max-width: 930px; color: var(--text-secondary); font-size: 13px; overflow-wrap: anywhere; }
+    .report-prose h1, .report-prose h2, .report-prose h3 { margin: 1.25em 0 .55em; color: var(--text); line-height: 1.25; }
+    .report-prose h1 { font-size: 21px; }
+    .report-prose h2 { padding-bottom: 6px; border-bottom: 1px solid var(--border); font-size: 17px; }
+    .report-prose h3 { font-size: 14px; }
+    .report-prose p { margin: .6em 0; line-height: 1.72; }
+    .report-prose ul, .report-prose ol { margin: .65em 0; padding-left: 22px; }
+    .report-prose li { margin: .3em 0; }
+    .report-prose strong { color: var(--text); }
+    .report-prose code { padding: 1px 4px; border-radius: 4px; background: var(--surface-soft); color: var(--primary); font-size: .88em; }
+    .report-prose pre { max-width: 100%; padding: 13px; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); white-space: pre-wrap; }
+    .report-prose pre code { padding: 0; background: none; color: var(--text-secondary); }
+    .report-prose blockquote { margin: .8em 0; padding: 2px 0 2px 13px; border-left: 3px solid var(--primary); color: var(--text-muted); }
+    .report-prose hr { margin: 1.2em 0; border: 0; border-top: 1px solid var(--border); }
+    .table-scroll { max-width: 100%; margin: .8em 0; overflow-x: auto; }
+    .report-prose table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 11px; }
+    .report-prose th, .report-prose td { padding: 8px 9px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+    .report-prose th { background: var(--surface-soft); color: var(--text); }
+    .report-prose tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-raised) 72%, transparent); }
+    mark { border-radius: 2px; background: var(--warning); color: #16120a; }
+
+    .history-controls { display: flex; align-items: center; gap: 6px; }
+    .history-controls select { width: auto; min-width: 130px; min-height: 34px; padding-block: 5px; font-size: 11px; }
+    .history-table-wrap { overflow-x: auto; }
+    .history-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 11px; }
+    .history-table th, .history-table td { padding: 10px 13px; border-bottom: 1px solid var(--border); color: var(--text-secondary); text-align: left; vertical-align: middle; }
+    .history-table th { color: var(--text-muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .history-table tr:last-child td { border-bottom: 0; }
+    .history-table tbody tr:hover td { background: var(--surface-raised); }
+    .history-signal { display: inline-block; min-width: 78px; padding: 3px 7px; border: 1px solid var(--border); border-radius: 999px; text-align: center; font-weight: 800; }
+    .history-signal.buy, .history-signal.overweight { border-color: color-mix(in srgb, var(--success) 50%, var(--border)); background: var(--success-soft); color: var(--success); }
+    .history-signal.hold { border-color: color-mix(in srgb, var(--warning) 50%, var(--border)); background: var(--warning-soft); color: var(--warning); }
+    .history-signal.sell, .history-signal.underweight { border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); background: var(--danger-soft); color: var(--danger); }
+    .history-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    .history-empty { padding: 24px 18px; color: var(--text-muted); font-size: 12px; text-align: center; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+    @media (max-width: 1120px) {
+      .pipeline-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: minmax(0, 1fr); padding-top: 14px; }
+      .config-panel { position: static; }
+      .config-panel:not(.mobile-open) .config-body { display: none; }
+      .config-panel:not(.mobile-open) .config-heading { border-bottom-color: transparent; }
+      .config-body { max-height: none; }
+    }
+    @media (min-width: 901px) {
+      .config-heading { cursor: default; }
+      .config-chevron { display: none; }
+      .mobile-only { display: none !important; }
+    }
+    @media (max-width: 640px) {
+      .brand-subtitle { display: none; }
+      .workspace { gap: 13px; padding-inline: 10px; }
+      .panel-header, .config-heading { padding: 13px 14px; }
+      .config-body { padding: 14px; }
+      .form-grid, .analyst-grid { grid-template-columns: 1fr; }
+      .pipeline-body { grid-template-columns: 1fr; padding: 11px; }
+      .decision-hero { flex-direction: column; }
+      .rating-badge { min-width: 0; width: 100%; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .report-tools { width: 100%; justify-content: flex-start; }
+      .report-search-wrap { width: 100%; }
+      .report-tools .secondary-button { flex: 1; padding-inline: 8px; }
+      .activity-event { grid-template-columns: 62px 40px minmax(0, 1fr); }
+      .status-text { max-width: 58vw; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    }
   </style>
 </head>
-<body class="min-h-screen">
-
-<!-- Header -->
-<header class="theme-border border-b px-6 py-4 flex items-center justify-between">
-  <div class="flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-sm font-bold text-white">TA</div>
-    <div>
-      <div class="font-semibold theme-primary">TradingAgents</div>
-      <div class="text-xs theme-muted">Multi-Agent LLM Financial Analysis</div>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">TA</div>
+      <div>
+        <div class="brand-title">TradingAgents</div>
+        <div class="brand-subtitle">Multi-agent financial analysis workspace</div>
+      </div>
     </div>
-  </div>
-  <button id="themeToggle" class="theme-toggle" title="Toggle light/dark mode" onclick="toggleTheme()">
-    <svg id="sunIcon" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-    </svg>
-    <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.831 8.831 9 9 0 1020.354 15.354z"/>
-    </svg>
-  </button>
-</header>
-
-<div class="max-w-7xl mx-auto px-4 py-6 flex gap-6">
-
-  <!-- Left sidebar: config form -->
-  <aside class="w-80 flex-shrink-0">
-    <div class="glass rounded-xl p-5 space-y-5 sticky top-6">
-      <h2 class="font-semibold theme-primary text-sm uppercase tracking-wider">Configuration</h2>
-
-      <!-- Ticker + date -->
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs theme-muted block mb-1">Ticker Symbol</label>
-          <input id="ticker" type="text" value="NVDA" placeholder="e.g. NVDA, SPY, BTC, ETH-USD"
-            class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500 transition" />
-        </div>
-        <div>
-          <label class="text-xs theme-muted block mb-1">Analysis Date</label>
-          <input id="tradeDate" type="date"
-            class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500 transition" />
-        </div>
-      </div>
-
-      <!-- Analysts -->
-      <div>
-        <label class="text-xs theme-muted block mb-2">Analysts</label>
-        <div class="grid grid-cols-2 gap-2" id="analystToggles">
-          <label class="analyst-toggle flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" value="market" checked class="accent-blue-500" /> <span class="text-sm">Market</span>
-          </label>
-          <label class="analyst-toggle flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" value="social" checked class="accent-blue-500" /> <span class="text-sm">Social</span>
-          </label>
-          <label class="analyst-toggle flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" value="news" checked class="accent-blue-500" /> <span class="text-sm">News</span>
-          </label>
-          <label class="analyst-toggle flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" value="fundamentals" checked class="accent-blue-500" /> <span class="text-sm">Fundamentals</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- LLM Provider -->
-      <div>
-        <label class="text-xs theme-muted block mb-1">LLM Provider</label>
-        <select id="provider" class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500 transition">
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic</option>
-          <option value="google">Google</option>
-          <option value="xai">xAI</option>
-          <option value="deepseek">DeepSeek</option>
-          <option value="qwen">Qwen</option>
-          <option value="glm">GLM</option>
-          <option value="openrouter">OpenRouter</option>
-          <option value="ollama">Ollama</option>
-          <option value="azure">Azure</option>
-        </select>
-      </div>
-
-      <!-- Model selects -->
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs theme-muted block mb-1">Quick-Think Model</label>
-          <select id="quickModel" class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500 transition"></select>
-        </div>
-        <div>
-          <label class="text-xs theme-muted block mb-1">Deep-Think Model</label>
-          <select id="deepModel" class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500 transition"></select>
-        </div>
-      </div>
-
-      <!-- Advanced -->
-      <details class="group">
-        <summary class="text-xs theme-muted cursor-pointer select-none flex items-center gap-1">
-          <span class="group-open:rotate-90 transition-transform inline-block">▶</span> Advanced
-        </summary>
-        <div class="mt-3 space-y-3">
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-xs theme-muted block mb-1">Debate Rounds</label>
-              <input id="debateRounds" type="number" value="1" min="1" max="5"
-                class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500" />
-            </div>
-            <div>
-              <label class="text-xs theme-muted block mb-1">Risk Rounds</label>
-              <input id="riskRounds" type="number" value="1" min="1" max="5"
-                class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500" />
-            </div>
-          </div>
-          <div>
-            <label class="text-xs theme-muted block mb-1">Output Language</label>
-            <select id="language" class="w-full rounded-lg px-3 py-2 text-sm border focus:outline-none focus:border-blue-500">
-              <option>English</option><option>Chinese</option><option>Spanish</option>
-              <option>French</option><option>German</option><option>Japanese</option>
-            </select>
-          </div>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input id="checkpoint" type="checkbox" class="accent-blue-500" />
-            <span class="text-sm theme-secondary">Enable Checkpoint Resume</span>
-          </label>
-        </div>
-      </details>
-
-      <button id="runBtn" onclick="startAnalysis()"
-        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg text-sm transition">
-        Run Analysis
+    <div class="header-actions">
+      <button id="mobileConfigButton" class="secondary-button mobile-only" type="button">Configuration</button>
+      <button id="themeToggle" class="icon-button" type="button" aria-label="Switch to light theme" title="Switch theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"></path>
+        </svg>
       </button>
     </div>
-  </aside>
+  </header>
 
-  <!-- Main content -->
-  <main class="flex-1 min-w-0 space-y-5">
+  <div id="notice" class="notice hidden" role="alert" aria-live="assertive">
+    <span class="notice-dot" aria-hidden="true"></span>
+    <span id="noticeMessage" class="notice-message"></span>
+    <button id="noticeClose" class="notice-close" type="button" aria-label="Dismiss message">Close</button>
+  </div>
 
-    <!-- Status bar -->
-    <div id="statusBar" class="text-sm theme-muted min-h-[1.25rem] flex items-center gap-2">
-      <span id="statusText"></span>
-      <span id="elapsedTimer" class="hidden font-mono theme-muted"></span>
-    </div>
+  <div class="workspace">
+    <aside id="configPanel" class="panel config-panel mobile-open" aria-label="Analysis configuration">
+      <button id="configToggle" class="config-heading" type="button" aria-expanded="true" aria-controls="configBody">
+        <span class="config-heading-copy">
+          <strong>Configuration</strong>
+          <span>Choose scope and research depth</span>
+        </span>
+        <svg class="config-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="m6 9 6 6 6-6"></path>
+        </svg>
+      </button>
 
-    <!-- Pipeline status -->
-    <div class="glass rounded-xl p-5">
-      <h2 class="font-semibold theme-primary text-sm uppercase tracking-wider mb-4">Pipeline</h2>
-      <div id="pipeline" class="flex flex-wrap gap-3">
-        <!-- Injected by JS -->
+      <div id="configBody" class="config-body">
+        <form id="configForm" novalidate>
+          <fieldset id="configFields" class="config-section">
+            <legend class="sr-only">Analysis settings</legend>
+
+            <div class="form-grid">
+              <div class="field">
+                <label class="field-label" for="ticker">Ticker</label>
+                <input id="ticker" name="ticker" type="text" value="NVDA" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="tickerError" placeholder="NVDA or BTC-USD">
+                <p id="tickerError" class="field-error"></p>
+              </div>
+              <div class="field">
+                <label class="field-label" for="tradeDate">Analysis date</label>
+                <input id="tradeDate" name="tradeDate" type="date" aria-describedby="tradeDateError">
+                <p id="tradeDateError" class="field-error"></p>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <span class="section-label">Research preset</span>
+              <div class="preset-grid" role="radiogroup" aria-label="Research preset">
+                <label class="preset-option"><input type="radio" name="preset" value="quick"><span>Quick</span></label>
+                <label class="preset-option"><input type="radio" name="preset" value="standard" checked><span>Standard</span></label>
+                <label class="preset-option"><input type="radio" name="preset" value="deep"><span>Deep</span></label>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <span class="section-label">Analyst team</span>
+              <div id="analystToggles" class="analyst-grid">
+                <label class="check-card"><input type="checkbox" value="market" checked><span>Market</span></label>
+                <label class="check-card"><input type="checkbox" value="social" checked><span>Sentiment</span></label>
+                <label class="check-card"><input type="checkbox" value="news" checked><span>News</span></label>
+                <label class="check-card"><input type="checkbox" value="fundamentals" checked><span>Fundamentals</span></label>
+              </div>
+              <p id="analystsError" class="field-error"></p>
+            </div>
+
+            <details class="advanced">
+              <summary>
+                Advanced settings
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+              </summary>
+              <div class="advanced-content">
+                <div class="field">
+                  <label class="field-label" for="provider">LLM provider</label>
+                  <select id="provider" aria-describedby="providerNote">
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="google">Google</option>
+                    <option value="xai">xAI</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="qwen">Qwen International</option>
+                    <option value="qwen-cn">Qwen China</option>
+                    <option value="glm">GLM International</option>
+                    <option value="glm-cn">GLM China</option>
+                    <option value="minimax">MiniMax International</option>
+                    <option value="minimax-cn">MiniMax China</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="ollama">Ollama</option>
+                  </select>
+                  <p id="providerNote" class="key-note">API keys and endpoints are read from the server environment.</p>
+                </div>
+
+                <div class="field">
+                  <label class="field-label" for="quickModel">Quick-think model</label>
+                  <select id="quickModel" aria-describedby="quickModelError"></select>
+                  <input id="quickModelCustom" class="hidden" type="text" maxlength="120" autocomplete="off" placeholder="Custom quick model ID" aria-label="Custom quick-think model ID">
+                  <p id="quickModelError" class="field-error"></p>
+                </div>
+                <div class="field">
+                  <label class="field-label" for="deepModel">Deep-think model</label>
+                  <select id="deepModel" aria-describedby="deepModelError"></select>
+                  <input id="deepModelCustom" class="hidden" type="text" maxlength="120" autocomplete="off" placeholder="Custom deep model ID" aria-label="Custom deep-think model ID">
+                  <p id="deepModelError" class="field-error"></p>
+                </div>
+
+                <div class="form-grid">
+                  <div class="field">
+                    <label class="field-label" for="debateRounds">Debate rounds</label>
+                    <input id="debateRounds" type="number" value="1" min="1" max="5" inputmode="numeric" aria-describedby="debateRoundsError">
+                    <p id="debateRoundsError" class="field-error"></p>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="riskRounds">Risk rounds</label>
+                    <input id="riskRounds" type="number" value="1" min="1" max="5" inputmode="numeric" aria-describedby="riskRoundsError">
+                    <p id="riskRoundsError" class="field-error"></p>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="field-label" for="language">Report language</label>
+                  <select id="language">
+                    <option>English</option>
+                    <option>Vietnamese</option>
+                    <option>Chinese</option>
+                    <option>Japanese</option>
+                    <option>Korean</option>
+                    <option>Hindi</option>
+                    <option>Spanish</option>
+                    <option>Portuguese</option>
+                    <option>French</option>
+                    <option>German</option>
+                    <option>Arabic</option>
+                    <option>Russian</option>
+                  </select>
+                </div>
+
+                <label class="switch-row">
+                  <input id="checkpoint" type="checkbox">
+                  <span>Enable checkpoint resume</span>
+                </label>
+              </div>
+            </details>
+          </fieldset>
+
+          <div id="configSummary" class="config-summary">4 analysts, standard depth, OpenAI</div>
+          <div class="run-actions">
+            <button id="runBtn" class="primary-button" type="submit">Run analysis</button>
+            <button id="cancelBtn" class="danger-button hidden" type="button">Cancel</button>
+          </div>
+        </form>
       </div>
-    </div>
+    </aside>
 
-    <!-- Activity log (visible while running) -->
-    <div id="activityPanel" class="hidden glass rounded-xl overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-3 border-b theme-border">
-        <h2 class="font-semibold theme-primary text-sm uppercase tracking-wider">Live Activity</h2>
-        <span id="activityCount" class="text-xs theme-muted"></span>
-      </div>
-      <div id="activityLog" class="p-4 h-48 overflow-y-auto space-y-1 font-mono text-xs"></div>
-    </div>
-
-    <!-- Final decision card (hidden until done) -->
-    <div id="decisionCard" class="hidden glass rounded-xl p-6 slide-in">
-      <div class="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <div class="text-xs theme-muted uppercase tracking-wider mb-1">Final Decision</div>
-          <div id="decisionTicker" class="text-3xl font-bold theme-primary"></div>
-          <div id="decisionDate" class="text-sm theme-muted mt-1"></div>
+    <main class="main-column">
+      <div class="status-row">
+        <div class="status-copy">
+          <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+          <span id="statusText" class="status-text" aria-live="polite">Ready to analyze</span>
+          <span id="elapsedTimer" class="elapsed hidden" aria-hidden="true"></span>
         </div>
-        <div id="ratingBadge" class="text-2xl font-bold px-6 py-3 rounded-xl"></div>
+        <div class="status-actions">
+          <button id="retryBtn" class="secondary-button hidden" type="button">Retry</button>
+        </div>
       </div>
-      <div id="decisionSummary" class="prose-dark mt-4 text-sm"></div>
-      <div id="runStats" class="hidden mt-3 text-xs theme-muted font-mono"></div>
-    </div>
 
-    <!-- Report tabs -->
-    <div id="reportsContainer" class="glass rounded-xl overflow-hidden">
-      <div class="flex gap-1 p-3 border-b theme-border overflow-x-auto" id="tabBar">
-        <!-- tabs injected by JS -->
-      </div>
-      <div id="tabContent" class="p-5 min-h-32">
-        <div class="theme-muted text-sm text-center py-8">Reports will appear here as agents complete.</div>
-      </div>
-    </div>
+      <section id="decisionCard" class="panel decision-card hidden" aria-labelledby="decisionTitle">
+        <div class="decision-hero">
+          <div>
+            <div class="eyebrow">Final decision</div>
+            <h1 id="decisionTicker" class="decision-ticker"></h1>
+            <div id="decisionDate" class="decision-date"></div>
+          </div>
+          <div id="ratingBadge" class="rating-badge">Hold</div>
+        </div>
+        <div class="decision-body">
+          <h2 id="decisionTitle" class="sr-only">Analysis decision</h2>
+          <div id="decisionSummary" class="decision-summary report-prose"></div>
+          <div class="metric-grid" aria-label="Run statistics">
+            <div class="metric"><span class="metric-label">Duration</span><span id="metricDuration" class="metric-value">-</span></div>
+            <div class="metric"><span class="metric-label">LLM calls</span><span id="metricLlm" class="metric-value">-</span></div>
+            <div class="metric"><span class="metric-label">Tool calls</span><span id="metricTools" class="metric-value">-</span></div>
+            <div class="metric"><span class="metric-label">Tokens in</span><span id="metricTokensIn" class="metric-value">-</span></div>
+            <div class="metric"><span class="metric-label">Tokens out</span><span id="metricTokensOut" class="metric-value">-</span></div>
+          </div>
+          <div class="decision-actions">
+            <button id="copyDecisionBtn" class="secondary-button" type="button">Copy decision</button>
+            <button id="exportDecisionBtn" class="secondary-button" type="button">Export Markdown</button>
+          </div>
+        </div>
+      </section>
 
-  </main>
-</div>
+      <section id="emptyState" class="panel empty-state">
+        <div class="empty-kicker">Decision workspace</div>
+        <h1>Configure an analysis, monitor each agent, then review the evidence.</h1>
+        <p>Reports appear as they complete. The final recommendation is summarized separately so you can evaluate the decision before reading every agent transcript.</p>
+      </section>
 
-<script>
-const PIPELINE_STAGES = [
-  { key: 'market',       label: 'Market',        group: 'Analysts' },
-  { key: 'social',       label: 'Social',        group: 'Analysts' },
-  { key: 'news',         label: 'News',          group: 'Analysts' },
-  { key: 'fundamentals', label: 'Fundamentals',  group: 'Analysts' },
-  { key: 'bull',         label: 'Bull',          group: 'Research' },
-  { key: 'bear',         label: 'Bear',          group: 'Research' },
-  { key: 'research_mgr', label: 'Res. Manager',  group: 'Research' },
-  { key: 'trader',       label: 'Trader',        group: 'Trading'  },
-  { key: 'aggressive',   label: 'Aggressive',    group: 'Risk'     },
-  { key: 'conservative', label: 'Conservative',  group: 'Risk'     },
-  { key: 'neutral',      label: 'Neutral',       group: 'Risk'     },
-  { key: 'portfolio',    label: 'Portfolio Mgr', group: 'Decision' },
-];
+      <section class="panel" aria-labelledby="pipelineTitle">
+        <div class="panel-header">
+          <h2 id="pipelineTitle" class="panel-title">Pipeline</h2>
+          <span id="pipelineMeta" class="panel-meta">Not started</span>
+        </div>
+        <div id="pipeline" class="pipeline-body"></div>
+      </section>
 
-// Backend emits reports for exactly these 7 fields (see webui/app.py FIELD_TO_AGENT)
-const FIELD_TO_STAGE = {
-  market_report:          'market',
-  sentiment_report:       'social',
-  news_report:            'news',
-  fundamentals_report:    'fundamentals',
-  investment_plan:        'research_mgr',
-  trader_investment_plan: 'trader',
-  final_trade_decision:   'portfolio',
-};
+      <details id="activityPanel" class="panel activity-panel hidden">
+        <summary class="panel-header">
+          <h2 class="panel-title">Activity details</h2>
+          <span id="activityCount" class="panel-meta">0 events</span>
+        </summary>
+        <div id="activityLog" class="activity-log"></div>
+      </details>
 
-const RATING_STYLES = {
-  'Buy':         { bg: 'bg-emerald-500/20', border: 'border-emerald-500', text: 'text-emerald-400' },
-  'Overweight':  { bg: 'bg-green-500/20',   border: 'border-green-400',   text: 'text-green-400' },
-  'Hold':        { bg: 'bg-yellow-500/20',  border: 'border-yellow-400',  text: 'text-yellow-400' },
-  'Underweight': { bg: 'bg-orange-500/20',  border: 'border-orange-400',  text: 'text-orange-400' },
-  'Sell':        { bg: 'bg-red-500/20',     border: 'border-red-500',     text: 'text-red-400' },
-};
+      <section class="panel reports-panel" aria-labelledby="reportsTitle">
+        <div class="panel-header report-header">
+          <div>
+            <h2 id="reportsTitle" class="panel-title">Agent reports</h2>
+            <span id="reportCount" class="panel-meta">0 of 7 complete</span>
+          </div>
+          <div id="reportTools" class="report-tools hidden">
+            <label class="report-search-wrap">
+              <span class="sr-only">Search current report</span>
+              <input id="reportSearch" type="text" placeholder="Search current report" autocomplete="off">
+              <span id="matchCount" class="match-count"></span>
+            </label>
+            <button id="copyReportBtn" class="secondary-button" type="button">Copy</button>
+            <button id="exportReportBtn" class="secondary-button" type="button">Export</button>
+          </div>
+        </div>
+        <div id="tabBar" class="report-tabs hidden" role="tablist" aria-label="Completed agent reports"></div>
+        <div id="tabContent" class="report-content" role="tabpanel" tabindex="0">
+          <div class="report-placeholder">Reports will appear here as agents complete.</div>
+        </div>
+      </section>
 
-let stageStatus  = {};   // key → 'pending'|'running'|'done'
-let stageStart   = {};   // key → Date (when stage went running)
-let reports      = {};   // field → {label, content}
-let activeTab    = null;
-let models       = {};
-let currentSource = null;
-let _timerInterval = null;
-let _startTime   = null;
-let _activityCount = 0;
+      <section class="panel" aria-labelledby="historyTitle">
+        <div class="panel-header report-header">
+          <div>
+            <h2 id="historyTitle" class="panel-title">Analysis history</h2>
+            <span class="panel-meta">Stored on this server</span>
+          </div>
+          <div class="history-controls">
+            <label>
+              <span class="sr-only">Filter recent decisions by ticker</span>
+              <select id="historyFilter"><option value="">All tickers</option></select>
+            </label>
+            <button id="clearHistoryBtn" class="ghost-button" type="button">Clear</button>
+          </div>
+        </div>
+        <div id="historyEmpty" class="history-empty">Completed analyses will appear here for quick comparison and reruns.</div>
+        <div id="historyTableWrap" class="history-table-wrap hidden">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th scope="col">Ticker</th>
+                <th scope="col">Analysis date</th>
+                <th scope="col">Decision</th>
+                <th scope="col">Duration</th>
+                <th scope="col">Tokens</th>
+                <th scope="col">Provider</th>
+                <th scope="col"><span class="sr-only">Action</span></th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
 
-// ─── Timer helpers ───────────────────────────────────────────────────────────
+  <script>
+    const PIPELINE_STAGES = [
+      { key: "market", label: "Market", group: "Analysts" },
+      { key: "social", label: "Sentiment", group: "Analysts" },
+      { key: "news", label: "News", group: "Analysts" },
+      { key: "fundamentals", label: "Fundamentals", group: "Analysts" },
+      { key: "bull", label: "Bull researcher", group: "Research" },
+      { key: "bear", label: "Bear researcher", group: "Research" },
+      { key: "research_mgr", label: "Research manager", group: "Research" },
+      { key: "trader", label: "Trader", group: "Trading" },
+      { key: "aggressive", label: "Aggressive", group: "Risk" },
+      { key: "conservative", label: "Conservative", group: "Risk" },
+      { key: "neutral", label: "Neutral", group: "Risk" },
+      { key: "portfolio", label: "Portfolio manager", group: "Decision" },
+    ];
 
-function fmtElapsed(ms) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
-}
+    const REPORT_LABELS = {
+      market_report: "Market analyst",
+      sentiment_report: "Sentiment analyst",
+      news_report: "News analyst",
+      fundamentals_report: "Fundamentals analyst",
+      investment_plan: "Research manager",
+      trader_investment_plan: "Trader",
+      final_trade_decision: "Portfolio manager",
+    };
+    const REPORT_ORDER = Object.keys(REPORT_LABELS);
 
-function startGlobalTimer() {
-  _startTime = Date.now();
-  const el = document.getElementById('elapsedTimer');
-  el.classList.remove('hidden');
-  _timerInterval = setInterval(() => {
-    el.textContent = fmtElapsed(Date.now() - _startTime);
-    // Update running stage pills with their elapsed time
-    Object.entries(stageStart).forEach(([key, t]) => {
-      if (stageStatus[key] === 'running') {
-        const pill = document.getElementById(`stage-${key}`);
-        if (pill) {
-          const stage = PIPELINE_STAGES.find(s => s.key === key);
-          const elapsed = fmtElapsed(Date.now() - t);
-          pill.innerHTML = `${statusIcon('running')} ${stage?.label ?? key} <span class="opacity-60">${elapsed}</span>`;
+    const PRESETS = {
+      quick: { analysts: ["market", "news"], debate: 1, risk: 1, label: "quick" },
+      standard: { analysts: ["market", "social", "news", "fundamentals"], debate: 1, risk: 1, label: "standard" },
+      deep: { analysts: ["market", "social", "news", "fundamentals"], debate: 3, risk: 3, label: "deep" },
+    };
+    let models = {};
+    let reports = {};
+    let activeTab = null;
+    let stageStatus = {};
+    let stageStart = {};
+    let currentSource = null;
+    let currentRunId = null;
+    let lastPayload = null;
+    let expectedReportCount = 7;
+    let timerInterval = null;
+    let startTime = null;
+    let activityCount = 0;
+    let noticeTimer = null;
+    let applyingPreset = false;
+
+    const byId = id => document.getElementById(id);
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      initTheme();
+      initResponsiveConfig();
+      initFormEvents();
+      initReportEvents();
+      const today = formatInputDate(new Date());
+      byId("tradeDate").value = today;
+      byId("tradeDate").max = today;
+      renderPipeline();
+      await loadModels();
+      restoreConfig();
+      updateConfigSummary();
+      await renderRunHistory();
+    });
+
+    function initTheme() {
+      const saved = localStorage.getItem("ta-theme");
+      const theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      setTheme(theme);
+      byId("themeToggle").addEventListener("click", () => {
+        setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      });
+    }
+
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem("ta-theme", theme);
+      const button = byId("themeToggle");
+      button.setAttribute("aria-label", `Switch to ${theme === "dark" ? "light" : "dark"} theme`);
+      byId("themeIcon").innerHTML = theme === "dark"
+        ? '<path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"></path>'
+        : '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>';
+    }
+
+    function initResponsiveConfig() {
+      const toggle = () => {
+        const panel = byId("configPanel");
+        const open = panel.classList.toggle("mobile-open");
+        byId("configToggle").setAttribute("aria-expanded", String(open));
+      };
+      byId("configToggle").addEventListener("click", () => {
+        if (window.matchMedia("(max-width: 900px)").matches) toggle();
+      });
+      byId("mobileConfigButton").addEventListener("click", () => {
+        const panel = byId("configPanel");
+        if (!panel.classList.contains("mobile-open")) toggle();
+        panel.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      });
+      byId("noticeClose").addEventListener("click", hideNotice);
+    }
+
+    function initFormEvents() {
+      byId("configForm").addEventListener("submit", event => {
+        event.preventDefault();
+        startAnalysis();
+      });
+      document.querySelectorAll('input[name="preset"]').forEach(input => {
+        input.addEventListener("change", () => applyPreset(input.value));
+      });
+      document.querySelectorAll("#analystToggles input, #debateRounds, #riskRounds").forEach(input => {
+        input.addEventListener("change", () => {
+          if (!applyingPreset) document.querySelectorAll('input[name="preset"]').forEach(item => { item.checked = false; });
+          updateConfigSummary();
+        });
+      });
+      ["ticker", "tradeDate", "language", "checkpoint"].forEach(id => byId(id).addEventListener("change", updateConfigSummary));
+      byId("provider").addEventListener("change", () => {
+        updateModelSelects(null, null);
+        updateConfigSummary();
+      });
+      ["quickModel", "deepModel"].forEach(id => {
+        byId(id).addEventListener("change", () => {
+          toggleCustomModel(id);
+          updateConfigSummary();
+        });
+      });
+      byId("cancelBtn").addEventListener("click", cancelAnalysis);
+      byId("retryBtn").addEventListener("click", retryAnalysis);
+    }
+
+    function initReportEvents() {
+      byId("reportSearch").addEventListener("input", () => renderActiveReport());
+      byId("copyReportBtn").addEventListener("click", () => {
+        const report = reports[activeTab];
+        if (report) copyText(report.content, "Report copied");
+      });
+      byId("exportReportBtn").addEventListener("click", () => {
+        const report = reports[activeTab];
+        if (report) downloadText(`${safeFilename(report.label)}.md`, report.content);
+      });
+      byId("copyDecisionBtn").addEventListener("click", () => {
+        const report = reports.final_trade_decision;
+        if (report) copyText(report.content, "Decision copied");
+      });
+      byId("exportDecisionBtn").addEventListener("click", () => {
+        const report = reports.final_trade_decision;
+        if (report) downloadText(`${safeFilename(byId("decisionTicker").textContent || "decision")}-decision.md`, report.content);
+      });
+      byId("tabBar").addEventListener("keydown", handleTabKeys);
+      byId("historyFilter").addEventListener("change", renderRunHistory);
+      byId("clearHistoryBtn").addEventListener("click", clearRunHistory);
+    }
+
+    async function loadModels() {
+      try {
+        const response = await fetch("/api/models");
+        if (!response.ok) throw new Error(`Model catalog request failed (${response.status})`);
+        models = await response.json();
+      } catch (error) {
+        models = { openai: { quick: [["Default quick model", "gpt-5.4-mini"]], deep: [["Default deep model", "gpt-5.4"]] } };
+        showNotice("The model catalog could not be loaded. OpenAI defaults are available; refresh to try again.", "warning");
+      }
+      updateModelSelects();
+    }
+
+    function updateModelSelects(preferredQuick, preferredDeep) {
+      const provider = byId("provider").value;
+      const options = models[provider] || { quick: [["Custom model ID", "custom"]], deep: [["Custom model ID", "custom"]] };
+      fillModelSelect("quickModel", options.quick, preferredQuick);
+      fillModelSelect("deepModel", options.deep, preferredDeep);
+      toggleCustomModel("quickModel");
+      toggleCustomModel("deepModel");
+    }
+
+    function fillModelSelect(id, options, preferred) {
+      const select = byId(id);
+      const previous = preferred === undefined ? select.value : preferred;
+      select.replaceChildren();
+      const normalized = options && options.length ? options : [["Custom model ID", "custom"]];
+      normalized.forEach(([label, value]) => select.add(new Option(label, value)));
+      if (previous && !Array.from(select.options).some(option => option.value === previous)) {
+        select.add(new Option(`Saved model: ${previous}`, previous));
+      }
+      if (previous) select.value = previous;
+    }
+
+    function toggleCustomModel(selectId) {
+      const custom = byId(`${selectId}Custom`);
+      const isCustom = byId(selectId).value === "custom";
+      custom.classList.toggle("hidden", !isCustom);
+      if (isCustom) custom.focus();
+    }
+
+    function applyPreset(name) {
+      const preset = PRESETS[name];
+      if (!preset) return;
+      applyingPreset = true;
+      document.querySelectorAll("#analystToggles input").forEach(input => {
+        input.checked = preset.analysts.includes(input.value);
+      });
+      byId("debateRounds").value = preset.debate;
+      byId("riskRounds").value = preset.risk;
+      applyingPreset = false;
+      updateConfigSummary();
+    }
+
+    function updateConfigSummary() {
+      const analystCount = selectedAnalysts().length;
+      const preset = document.querySelector('input[name="preset"]:checked');
+      const depth = preset ? PRESETS[preset.value].label : `custom ${byId("debateRounds").value}/${byId("riskRounds").value}`;
+      const providerLabel = byId("provider").selectedOptions[0]?.textContent || byId("provider").value;
+      byId("configSummary").textContent = `${analystCount} analyst${analystCount === 1 ? "" : "s"}, ${depth} depth, ${providerLabel}`;
+    }
+
+    function selectedAnalysts() {
+      return Array.from(document.querySelectorAll("#analystToggles input:checked")).map(input => input.value);
+    }
+
+    function getModelValue(id) {
+      return byId(id).value === "custom" ? byId(`${id}Custom`).value.trim() : byId(id).value;
+    }
+
+    function validateAndBuildPayload() {
+      clearFieldErrors();
+      let valid = true;
+      const ticker = byId("ticker").value.trim().toUpperCase();
+      const tradeDate = byId("tradeDate").value;
+      const analysts = selectedAnalysts();
+      const quickModel = getModelValue("quickModel");
+      const deepModel = getModelValue("deepModel");
+      const debateRounds = Number(byId("debateRounds").value);
+      const riskRounds = Number(byId("riskRounds").value);
+
+      if (!ticker || ticker.length > 32 || !/^[A-Z0-9._\-\^]+$/.test(ticker)) {
+        setFieldError("ticker", "Enter a valid ticker, such as NVDA, 0700.HK, or BTC-USD.");
+        valid = false;
+      }
+      if (!tradeDate) {
+        setFieldError("tradeDate", "Choose an analysis date.");
+        valid = false;
+      } else if (tradeDate > formatInputDate(new Date())) {
+        setFieldError("tradeDate", "Analysis date cannot be in the future.");
+        valid = false;
+      }
+      if (!analysts.length) {
+        byId("analystsError").textContent = "Select at least one analyst.";
+        valid = false;
+      }
+      if (!quickModel) {
+        setFieldError("quickModel", "Choose or enter a quick-think model.");
+        valid = false;
+      }
+      if (!deepModel) {
+        setFieldError("deepModel", "Choose or enter a deep-think model.");
+        valid = false;
+      }
+      if (!Number.isInteger(debateRounds) || debateRounds < 1 || debateRounds > 5) {
+        setFieldError("debateRounds", "Use a value from 1 to 5.");
+        valid = false;
+      }
+      if (!Number.isInteger(riskRounds) || riskRounds < 1 || riskRounds > 5) {
+        setFieldError("riskRounds", "Use a value from 1 to 5.");
+        valid = false;
+      }
+
+      if (!valid) {
+        showNotice("Review the highlighted configuration fields.", "error");
+        document.querySelector('[aria-invalid="true"]')?.focus();
+        return null;
+      }
+
+      return {
+        ticker,
+        date: tradeDate,
+        analysts,
+        provider: byId("provider").value,
+        quick_model: quickModel,
+        deep_model: deepModel,
+        max_debate_rounds: debateRounds,
+        max_risk_discuss_rounds: riskRounds,
+        language: byId("language").value,
+        checkpoint: byId("checkpoint").checked,
+      };
+    }
+
+    async function startAnalysis(payloadOverride = null) {
+      if (currentRunId) return;
+      const payload = payloadOverride || validateAndBuildPayload();
+      if (!payload) return;
+      lastPayload = payload;
+      saveConfig(payload);
+      resetRunUi(payload.analysts);
+      setRunning(true);
+      setStatus(`Starting ${payload.ticker} analysis`, "running");
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        byId("configPanel").classList.remove("mobile-open");
+        byId("configToggle").setAttribute("aria-expanded", "false");
+      }
+
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.run_id) throw new Error(apiErrorMessage(data, response.status));
+        currentRunId = data.run_id;
+        startTimer();
+        connectStream(currentRunId);
+      } catch (error) {
+        setRunning(false);
+        setStatus("Analysis could not start", "error");
+        byId("retryBtn").classList.remove("hidden");
+        showNotice(error.message || "Analysis could not start.", "error");
+      }
+    }
+
+    function connectStream(runId) {
+      if (currentSource) currentSource.close();
+      currentSource = new EventSource(`/api/stream/${runId}`);
+      currentSource.onmessage = event => {
+        let data;
+        try { data = JSON.parse(event.data); } catch { return; }
+        handleStreamEvent(data);
+      };
+      currentSource.onerror = () => {
+        if (!currentSource || currentSource.readyState !== EventSource.CLOSED) {
+          setStatus("Connection interrupted; attempting to reconnect", "warning");
+          return;
+        }
+        finishRun("Connection closed before the analysis finished", "error", true);
+      };
+    }
+
+    function handleStreamEvent(data) {
+      if (data.type === "stage") {
+        updateStage(data.stage, data.status);
+      } else if (data.type === "progress") {
+        appendActivity(data);
+      } else if (data.type === "status") {
+        setStatus(data.message, "running");
+      } else if (data.type === "report") {
+        reports[data.field] = { label: data.agent || REPORT_LABELS[data.field] || data.field, content: String(data.content || "") };
+        addReportTab(data.field);
+        updateReportCount();
+        if (activeTab === data.field) renderActiveReport();
+      } else if (data.type === "complete") {
+        showDecision(data);
+        saveRunHistory(data);
+        finishRun("Analysis complete", "success", false);
+      } else if (data.type === "cancelled") {
+        finishRun(data.message || "Analysis cancelled", "warning", true);
+      } else if (data.type === "error") {
+        showNotice(data.message || "The analysis failed.", "error");
+        finishRun("Analysis failed", "error", true);
+      } else if (data.type === "done") {
+        closeSource();
+      }
+    }
+
+    async function cancelAnalysis() {
+      if (!currentRunId) return;
+      const button = byId("cancelBtn");
+      button.disabled = true;
+      button.textContent = "Cancelling";
+      setStatus("Cancelling analysis", "warning");
+      try {
+        const response = await fetch(`/api/cancel/${currentRunId}`, { method: "POST" });
+        if (!response.ok) throw new Error(`Cancellation failed (${response.status})`);
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "Cancel";
+        showNotice(error.message || "Cancellation failed.", "error");
+      }
+    }
+
+    function retryAnalysis() {
+      byId("retryBtn").classList.add("hidden");
+      startAnalysis(lastPayload);
+    }
+
+    function resetRunUi(analysts) {
+      activityCount = 0;
+      expectedReportCount = analysts.length + 3;
+      stageStart = {};
+      resetReportsWorkspace(expectedReportCount, "Waiting for the first completed report.");
+      byId("activityPanel").classList.remove("hidden");
+      byId("activityPanel").open = true;
+      byId("activityLog").replaceChildren();
+      byId("activityCount").textContent = "0 events";
+      byId("retryBtn").classList.add("hidden");
+      PIPELINE_STAGES.forEach(stage => {
+        const status = ["market", "social", "news", "fundamentals"].includes(stage.key) && !analysts.includes(stage.key) ? "skipped" : "queued";
+        updateStage(stage.key, status);
+      });
+    }
+
+    function resetReportsWorkspace(expectedCount, placeholder) {
+      reports = {};
+      activeTab = null;
+      expectedReportCount = expectedCount;
+      byId("emptyState").classList.add("hidden");
+      byId("decisionCard").classList.add("hidden");
+      byId("tabBar").replaceChildren();
+      byId("tabBar").classList.add("hidden");
+      byId("reportTools").classList.add("hidden");
+      byId("reportSearch").value = "";
+      byId("matchCount").textContent = "";
+      byId("tabContent").innerHTML = `<div class="report-placeholder">${escapeHtml(placeholder)}</div>`;
+      byId("reportCount").textContent = `0 of ${expectedReportCount} complete`;
+    }
+
+    function setRunning(running) {
+      byId("configFields").disabled = running;
+      byId("runBtn").disabled = running;
+      byId("runBtn").textContent = running ? "Analysis running" : "Run analysis";
+      byId("cancelBtn").classList.toggle("hidden", !running);
+      byId("cancelBtn").disabled = false;
+      byId("cancelBtn").textContent = "Cancel";
+      document.querySelectorAll(".history-run-button").forEach(button => { button.disabled = running; });
+      document.querySelectorAll(".history-view-button").forEach(button => { button.disabled = running; });
+    }
+
+    function finishRun(message, tone, retryable) {
+      stopTimer();
+      currentRunId = null;
+      setRunning(false);
+      setStatus(message, tone);
+      byId("retryBtn").classList.toggle("hidden", !retryable || !lastPayload);
+    }
+
+    function closeSource() {
+      if (currentSource) currentSource.close();
+      currentSource = null;
+    }
+
+    function renderPipeline() {
+      const groups = {};
+      PIPELINE_STAGES.forEach(stage => {
+        if (!groups[stage.group]) groups[stage.group] = [];
+        groups[stage.group].push(stage);
+        stageStatus[stage.key] = "idle";
+      });
+      const container = byId("pipeline");
+      container.replaceChildren();
+      Object.entries(groups).forEach(([groupName, stages]) => {
+        const group = document.createElement("div");
+        group.className = "pipeline-group";
+        const title = document.createElement("div");
+        title.className = "pipeline-group-title";
+        title.textContent = groupName;
+        const list = document.createElement("div");
+        list.className = "stage-list";
+        stages.forEach(stage => {
+          const pill = document.createElement("div");
+          pill.id = `stage-${stage.key}`;
+          pill.className = "stage-pill idle";
+          pill.dataset.label = stage.label;
+          const indicator = document.createElement("span");
+          indicator.className = "stage-indicator";
+          indicator.setAttribute("aria-hidden", "true");
+          const name = document.createElement("span");
+          name.className = "stage-name";
+          name.textContent = stage.label;
+          const time = document.createElement("span");
+          time.className = "stage-time";
+          pill.append(indicator, name, time);
+          list.appendChild(pill);
+        });
+        group.append(title, list);
+        container.appendChild(group);
+      });
+    }
+
+    function updateStage(key, status) {
+      const pill = byId(`stage-${key}`);
+      if (!pill) return;
+      stageStatus[key] = status;
+      if (status === "running" && !stageStart[key]) stageStart[key] = Date.now();
+      pill.className = `stage-pill ${status}`;
+      pill.setAttribute("aria-label", `${pill.dataset.label}: ${status}`);
+      const time = pill.querySelector(".stage-time");
+      if (status === "done" && stageStart[key]) time.textContent = formatElapsed(Date.now() - stageStart[key]);
+      else if (status !== "running") time.textContent = "";
+      updatePipelineMeta();
+    }
+
+    function updatePipelineMeta() {
+      const statuses = Object.values(stageStatus);
+      const done = statuses.filter(status => status === "done").length;
+      const running = statuses.filter(status => status === "running").length;
+      const failed = statuses.filter(status => status === "error").length;
+      byId("pipelineMeta").textContent = failed ? `${failed} failed` : running ? `${running} active, ${done} complete` : done ? `${done} complete` : "Not started";
+    }
+
+    function appendActivity(data) {
+      const event = document.createElement("div");
+      event.className = "activity-event";
+      const time = document.createElement("span");
+      time.className = "activity-time";
+      time.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const kind = document.createElement("span");
+      const message = document.createElement("span");
+      if (data.event === "tool") {
+        kind.className = "activity-kind tool";
+        kind.textContent = "TOOL";
+        message.textContent = `${data.name || "tool"}${data.input ? `: ${data.input}` : ""}`;
+      } else if (data.event === "tool_done") {
+        kind.className = "activity-kind done";
+        kind.textContent = "DONE";
+        message.textContent = data.preview || "Tool completed";
+      } else {
+        kind.className = "activity-kind";
+        kind.textContent = "MODEL";
+        message.textContent = `${data.name || "LLM"} is reasoning`;
+      }
+      event.append(time, kind, message);
+      byId("activityLog").appendChild(event);
+      byId("activityLog").scrollTop = byId("activityLog").scrollHeight;
+      activityCount += 1;
+      byId("activityCount").textContent = `${activityCount} event${activityCount === 1 ? "" : "s"}`;
+    }
+
+    function addReportTab(field) {
+      if (byId(`tab-${field}`)) return;
+      const button = document.createElement("button");
+      button.id = `tab-${field}`;
+      button.className = "tab-button";
+      button.type = "button";
+      button.role = "tab";
+      button.setAttribute("aria-selected", "false");
+      button.setAttribute("aria-controls", "tabContent");
+      button.tabIndex = -1;
+      button.textContent = reports[field].label;
+      button.addEventListener("click", () => showReport(field));
+      byId("tabBar").appendChild(button);
+      byId("tabBar").classList.remove("hidden");
+      byId("reportTools").classList.remove("hidden");
+      if (!activeTab) showReport(field);
+    }
+
+    function showReport(field) {
+      activeTab = field;
+      document.querySelectorAll(".tab-button").forEach(button => {
+        const selected = button.id === `tab-${field}`;
+        button.setAttribute("aria-selected", String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      byId("reportSearch").value = "";
+      renderActiveReport();
+    }
+
+    function renderActiveReport() {
+      const report = reports[activeTab];
+      if (!report) return;
+      const content = byId("tabContent");
+      content.innerHTML = `<article class="report-prose">${renderMarkdown(report.content)}</article>`;
+      const query = byId("reportSearch").value.trim();
+      const matches = query ? highlightSearch(content, query) : 0;
+      byId("matchCount").textContent = query ? `${matches} match${matches === 1 ? "" : "es"}` : "";
+    }
+
+    function updateReportCount() {
+      const count = Object.keys(reports).length;
+      byId("reportCount").textContent = `${count} of ${expectedReportCount} complete`;
+    }
+
+    function handleTabKeys(event) {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      const tabs = Array.from(document.querySelectorAll(".tab-button"));
+      if (!tabs.length) return;
+      event.preventDefault();
+      const index = tabs.findIndex(tab => tab.getAttribute("aria-selected") === "true");
+      let next = index;
+      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+      if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = tabs.length - 1;
+      tabs[next].focus();
+      tabs[next].click();
+    }
+
+    function showDecision(data) {
+      const card = byId("decisionCard");
+      card.classList.remove("hidden");
+      byId("decisionTicker").textContent = data.ticker || lastPayload?.ticker || "";
+      byId("decisionDate").textContent = `Analysis date: ${data.date || lastPayload?.date || ""}`;
+      const signal = String(data.decision || "Hold");
+      const badge = byId("ratingBadge");
+      badge.textContent = signal;
+      badge.className = `rating-badge ${signal.toLowerCase().replace(/\s+/g, "-")}`;
+      const decision = reports.final_trade_decision?.content || "";
+      const summary = decision.split("\n").filter(line => line.trim()).slice(0, 7).join("\n");
+      byId("decisionSummary").innerHTML = renderMarkdown(summary || `Final signal: **${signal}**`);
+      const stats = data.stats || {};
+      byId("metricDuration").textContent = data.duration_ms != null
+        ? formatElapsed(data.duration_ms)
+        : startTime ? formatElapsed(Date.now() - startTime) : "-";
+      byId("metricLlm").textContent = formatNumber(stats.llm_calls);
+      byId("metricTools").textContent = formatNumber(stats.tool_calls);
+      byId("metricTokensIn").textContent = formatNumber(stats.tokens_in);
+      byId("metricTokensOut").textContent = formatNumber(stats.tokens_out);
+      if (reports.final_trade_decision) showReport("final_trade_decision");
+      card.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    }
+
+    async function loadRunHistory() {
+      try {
+        const response = await fetch("/api/history?limit=100");
+        if (!response.ok) throw new Error(`History request failed (${response.status})`);
+        const history = await response.json();
+        return Array.isArray(history) ? history : [];
+      } catch {
+        showNotice("Analysis history could not be loaded.", "warning");
+        return [];
+      }
+    }
+
+    function saveRunHistory(data) {
+      void data;
+      void renderRunHistory();
+    }
+
+    async function renderRunHistory() {
+      const history = await loadRunHistory();
+      const filter = byId("historyFilter");
+      const selected = filter.value;
+      const tickers = Array.from(new Set(history.map(item => item.ticker).filter(Boolean))).sort();
+      filter.replaceChildren(new Option("All tickers", ""));
+      tickers.forEach(ticker => filter.add(new Option(ticker, ticker)));
+      filter.value = tickers.includes(selected) ? selected : "";
+
+      const filtered = filter.value ? history.filter(item => item.ticker === filter.value) : history;
+      byId("historyEmpty").classList.toggle("hidden", filtered.length > 0);
+      byId("historyTableWrap").classList.toggle("hidden", filtered.length === 0);
+      const body = byId("historyBody");
+      body.replaceChildren();
+
+      filtered.forEach(record => {
+        const row = document.createElement("tr");
+        const ticker = document.createElement("td");
+        ticker.textContent = record.ticker || "-";
+        const analysisDate = document.createElement("td");
+        analysisDate.textContent = record.trade_date || record.date || "-";
+        const decision = document.createElement("td");
+        const signal = document.createElement("span");
+        const decisionText = record.decision || record.status || "Hold";
+        signal.className = `history-signal ${ratingClass(decisionText)}`;
+        signal.textContent = decisionText;
+        decision.appendChild(signal);
+        const duration = document.createElement("td");
+        duration.textContent = formatElapsed(record.duration_ms || 0);
+        const tokens = document.createElement("td");
+        tokens.textContent = formatNumber((record.tokens_in || 0) + (record.tokens_out || 0));
+        const provider = document.createElement("td");
+        provider.textContent = record.provider || "-";
+        const action = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "history-actions";
+        const view = document.createElement("button");
+        view.type = "button";
+        view.className = "secondary-button history-view-button";
+        view.textContent = "View";
+        view.disabled = Boolean(currentRunId);
+        view.addEventListener("click", () => {
+          if (currentRunId) return;
+          loadHistoryRun(record);
+        });
+        const rerun = document.createElement("button");
+        rerun.type = "button";
+        rerun.className = "secondary-button history-run-button";
+        rerun.textContent = "Run again";
+        rerun.disabled = Boolean(currentRunId);
+        rerun.addEventListener("click", () => {
+          if (!record.payload || currentRunId) return;
+          applyPayloadToForm(record.payload);
+          startAnalysis(record.payload);
+        });
+        actions.append(view, rerun);
+        action.appendChild(actions);
+        row.append(ticker, analysisDate, decision, duration, tokens, provider, action);
+        body.appendChild(row);
+      });
+    }
+
+    async function loadHistoryRun(record) {
+      if (!record.run_id) return;
+      closeSource();
+      stopTimer();
+      currentRunId = null;
+      setRunning(false);
+      setStatus(`Loading saved analysis for ${record.ticker || "run"}`, "running");
+      byId("activityPanel").classList.add("hidden");
+
+      try {
+        const reportResponse = await fetch(`/api/history/${encodeURIComponent(record.run_id)}/reports`);
+        if (!reportResponse.ok) throw new Error(`Report index request failed (${reportResponse.status})`);
+        const reportIndex = await reportResponse.json();
+        const ordered = Array.isArray(reportIndex)
+          ? reportIndex.slice().sort((a, b) => (
+              (REPORT_ORDER.includes(a.field) ? REPORT_ORDER.indexOf(a.field) : REPORT_ORDER.length) -
+              (REPORT_ORDER.includes(b.field) ? REPORT_ORDER.indexOf(b.field) : REPORT_ORDER.length)
+            ))
+          : [];
+
+        resetReportsWorkspace(Math.max(ordered.length, 1), "Loading saved reports.");
+
+        const loadedReports = await Promise.all(ordered.map(async item => {
+          const response = await fetch(
+            `/api/history/${encodeURIComponent(record.run_id)}/reports/${encodeURIComponent(item.field)}`
+          );
+          if (!response.ok) throw new Error(`Report request failed (${response.status})`);
+          const data = await response.json();
+          return {
+            field: item.field,
+            label: item.agent || REPORT_LABELS[item.field] || item.field,
+            content: String(data.content || ""),
+          };
+        }));
+
+        loadedReports.forEach(item => {
+          reports[item.field] = { label: item.label, content: item.content };
+          addReportTab(item.field);
+        });
+        updateReportCount();
+
+        showDecision({
+          ticker: record.ticker,
+          date: record.trade_date || record.date,
+          decision: record.decision || record.status || "Hold",
+          duration_ms: record.duration_ms || 0,
+          stats: {
+            llm_calls: record.llm_calls || 0,
+            tool_calls: record.tool_calls || 0,
+            tokens_in: record.tokens_in || 0,
+            tokens_out: record.tokens_out || 0,
+          },
+        });
+
+        setStatus(`Viewing saved analysis for ${record.ticker || "run"}`, "success");
+      } catch (error) {
+        showNotice(error.message || "Saved analysis could not be loaded.", "error");
+        setStatus("Saved analysis could not be loaded", "error");
+      }
+    }
+
+    async function clearRunHistory() {
+      const history = await loadRunHistory();
+      if (!history.length) return;
+      try {
+        await Promise.all(history.map(record => (
+          fetch(`/api/history/${encodeURIComponent(record.run_id)}`, { method: "DELETE" })
+        )));
+        await renderRunHistory();
+        showNotice("Recent decisions cleared", "success", true);
+      } catch {
+        showNotice("Recent decisions could not be cleared.", "error");
+      }
+    }
+
+    function applyPayloadToForm(payload) {
+      byId("ticker").value = payload.ticker || byId("ticker").value;
+      if (payload.date && payload.date <= formatInputDate(new Date())) byId("tradeDate").value = payload.date;
+      if (payload.provider && Array.from(byId("provider").options).some(option => option.value === payload.provider)) {
+        byId("provider").value = payload.provider;
+      }
+      updateModelSelects(payload.quick_model, payload.deep_model);
+      document.querySelectorAll("#analystToggles input").forEach(input => {
+        input.checked = (payload.analysts || []).includes(input.value);
+      });
+      byId("debateRounds").value = payload.max_debate_rounds || 1;
+      byId("riskRounds").value = payload.max_risk_discuss_rounds || 1;
+      if (payload.language && Array.from(byId("language").options).some(option => option.value === payload.language)) {
+        byId("language").value = payload.language;
+      }
+      byId("checkpoint").checked = Boolean(payload.checkpoint);
+      document.querySelectorAll('input[name="preset"]').forEach(input => { input.checked = false; });
+      updateConfigSummary();
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = String(markdown || "").replace(/\r\n/g, "\n").split("\n");
+      const html = [];
+      let listType = null;
+      let inCode = false;
+      let codeLines = [];
+
+      const closeList = () => {
+        if (listType) html.push(`</${listType}>`);
+        listType = null;
+      };
+
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        if (/^\s*```/.test(line)) {
+          if (inCode) {
+            html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+            codeLines = [];
+            inCode = false;
+          } else {
+            closeList();
+            inCode = true;
+          }
+          continue;
+        }
+        if (inCode) {
+          codeLines.push(line);
+          continue;
+        }
+        if (isTableRow(line) && index + 1 < lines.length && isTableDivider(lines[index + 1])) {
+          closeList();
+          const headers = splitTableRow(line);
+          const rows = [];
+          index += 2;
+          while (index < lines.length && isTableRow(lines[index])) {
+            rows.push(splitTableRow(lines[index]));
+            index += 1;
+          }
+          index -= 1;
+          html.push(`<div class="table-scroll"><table><thead><tr>${headers.map(cell => `<th>${inlineMarkdown(cell)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${inlineMarkdown(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+          continue;
+        }
+        const heading = line.match(/^(#{1,3})\s+(.+)$/);
+        if (heading) {
+          closeList();
+          const level = heading[1].length;
+          html.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+          continue;
+        }
+        const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+        if (unordered || ordered) {
+          const nextType = unordered ? "ul" : "ol";
+          if (listType !== nextType) {
+            closeList();
+            listType = nextType;
+            html.push(`<${listType}>`);
+          }
+          html.push(`<li>${inlineMarkdown((unordered || ordered)[1])}</li>`);
+          continue;
+        }
+        closeList();
+        if (!line.trim()) continue;
+        if (/^\s*---+\s*$/.test(line)) {
+          html.push("<hr>");
+        } else if (/^\s*>\s?/.test(line)) {
+          html.push(`<blockquote>${inlineMarkdown(line.replace(/^\s*>\s?/, ""))}</blockquote>`);
+        } else {
+          html.push(`<p>${inlineMarkdown(line)}</p>`);
         }
       }
-    });
-  }, 1000);
-}
-
-function stopGlobalTimer() {
-  clearInterval(_timerInterval);
-  _timerInterval = null;
-  document.getElementById('elapsedTimer').classList.add('hidden');
-}
-
-// ─── Activity log ────────────────────────────────────────────────────────────
-
-function appendActivity(html) {
-  const log = document.getElementById('activityLog');
-  const div = document.createElement('div');
-  div.className = 'slide-in';
-  div.innerHTML = html;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-  _activityCount++;
-  document.getElementById('activityCount').textContent = `${_activityCount} events`;
-}
-
-function renderProgress(d) {
-  const ts = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const time = `<span class="theme-muted">${ts}</span>`;
-  if (d.event === 'tool') {
-    const inp = d.input ? ` <span class="theme-muted">${escHtml(d.input)}</span>` : '';
-    appendActivity(`${time} <span class="text-amber-400">⚙ ${escHtml(d.name)}</span>${inp}`);
-  } else if (d.event === 'tool_done') {
-    const prev = d.preview ? ` <span class="theme-muted">→ ${escHtml(d.preview)}</span>` : '';
-    appendActivity(`${time} <span class="theme-muted">  ↩ done${prev}</span>`);
-  } else if (d.event === 'llm') {
-    appendActivity(`${time} <span class="text-blue-400">🤖 ${escHtml(d.name)}</span> <span class="theme-muted">thinking…</span>`);
-  }
-}
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ─── Init ────────────────────────────────────────────────────────────────────
-
-// ─── Theme management ────────────────────────────────────────────────────────
-
-function initTheme() {
-  const saved = localStorage.getItem('ta-theme');
-  const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  setTheme(theme);
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('ta-theme', theme);
-  updateThemeIcons(theme);
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  setTheme(next);
-}
-
-function updateThemeIcons(theme) {
-  const sun = document.getElementById('sunIcon');
-  const moon = document.getElementById('moonIcon');
-  if (theme === 'dark') {
-    sun.classList.add('hidden');
-    moon.classList.remove('hidden');
-  } else {
-    sun.classList.remove('hidden');
-    moon.classList.add('hidden');
-  }
-}
-
-// ─── Init ────────────────────────────────────────────────────────────────────
-
-document.addEventListener('DOMContentLoaded', async () => {
-  initTheme();
-  document.getElementById('tradeDate').value = new Date().toISOString().slice(0,10);
-  await loadModels();
-  document.getElementById('provider').addEventListener('change', () => updateModelSelects());
-  updateModelSelects();
-  resetPipeline();
-});
-
-async function loadModels() {
-  try {
-    const res = await fetch('/api/models');
-    models = await res.json();
-  } catch(e) { console.warn('Could not load models', e); }
-}
-
-function updateModelSelects() {
-  const provider = document.getElementById('provider').value;
-  const opts = models[provider];
-  if (!opts) return;
-  fillSelect('quickModel', opts.quick || []);
-  fillSelect('deepModel', opts.deep || []);
-}
-
-function fillSelect(id, options) {
-  const sel = document.getElementById(id);
-  sel.innerHTML = '';
-  if (!options || options.length === 0) {
-    const o = document.createElement('option');
-    o.textContent = 'custom'; o.value = 'custom';
-    sel.appendChild(o);
-    return;
-  }
-  options.forEach(([label, value]) => {
-    const o = document.createElement('option');
-    o.textContent = label; o.value = value;
-    sel.appendChild(o);
-  });
-}
-
-// ─── Pipeline UI ─────────────────────────────────────────────────────────────
-
-function resetPipeline() {
-  stageStatus = {};
-  stageStart  = {};
-  PIPELINE_STAGES.forEach(s => { stageStatus[s.key] = 'pending'; });
-  renderPipeline();
-}
-
-function renderPipeline() {
-  const container = document.getElementById('pipeline');
-  const groups = {};
-  PIPELINE_STAGES.forEach(s => {
-    if (!groups[s.group]) groups[s.group] = [];
-    groups[s.group].push(s);
-  });
-  container.innerHTML = '';
-  Object.entries(groups).forEach(([grpName, stages]) => {
-    const grp = document.createElement('div');
-    grp.className = 'flex flex-col gap-1';
-    const lbl = document.createElement('div');
-    lbl.className = 'text-xs theme-muted uppercase tracking-wider px-1';
-    lbl.textContent = grpName;
-    grp.appendChild(lbl);
-    const pills = document.createElement('div');
-    pills.className = 'flex gap-1 flex-wrap';
-    stages.forEach(s => {
-      const status = stageStatus[s.key] || 'pending';
-      const pill = document.createElement('div');
-      pill.id = `stage-${s.key}`;
-      pill.className = `px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${statusClass(status)}`;
-      pill.innerHTML = `${statusIcon(status)} ${s.label}`;
-      pills.appendChild(pill);
-    });
-    grp.appendChild(pills);
-    container.appendChild(grp);
-  });
-}
-
-function updateStage(key, status) {
-  stageStatus[key] = status;
-  if (status === 'running' && !stageStart[key]) stageStart[key] = Date.now();
-  const el = document.getElementById(`stage-${key}`);
-  if (!el) return;
-  const stage = PIPELINE_STAGES.find(s => s.key === key);
-  let label = stage ? stage.label : key;
-  if (status === 'done' && stageStart[key]) {
-    label += ` <span class="opacity-50">${fmtElapsed(Date.now() - stageStart[key])}</span>`;
-  }
-  el.className = `px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${statusClass(status)}`;
-  el.innerHTML = `${statusIcon(status)} ${label}`;
-}
-
-function statusClass(s) {
-  return s === 'done'    ? 'stage-done'
-       : s === 'running' ? 'stage-running'
-       :                   'stage-pending';
-}
-
-function statusIcon(s) {
-  return s === 'done'    ? '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
-       : s === 'running' ? '<svg class="spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>'
-       :                   '<span class="w-2 h-2 rounded-full bg-current inline-block"></span>';
-}
-
-// ─── Tabs ─────────────────────────────────────────────────────────────────────
-
-function addTab(field, label) {
-  const tabBar = document.getElementById('tabBar');
-  const existing = document.getElementById(`tab-${field}`);
-  if (existing) return;
-
-  const btn = document.createElement('button');
-  btn.id = `tab-${field}`;
-  btn.className = 'tab-btn px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap';
-  btn.textContent = label;
-  btn.onclick = () => showTab(field);
-  tabBar.appendChild(btn);
-
-  if (!activeTab) showTab(field);
-}
-
-function showTab(field) {
-  activeTab = field;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById(`tab-${field}`);
-  if (btn) btn.classList.add('active');
-
-  const content = document.getElementById('tabContent');
-  const rep = reports[field];
-  if (rep) {
-    content.innerHTML = `<div class="prose-dark text-sm slide-in">${marked.parse(rep.content)}</div>`;
-  }
-}
-
-function updateTabContent(field) {
-  if (activeTab === field) showTab(field);
-}
-
-// ─── Analysis ─────────────────────────────────────────────────────────────────
-
-async function startAnalysis() {
-  const ticker    = document.getElementById('ticker').value.trim().toUpperCase();
-  const tradeDate = document.getElementById('tradeDate').value;
-  if (!ticker || !tradeDate) { alert('Please enter a ticker and date.'); return; }
-
-  const analysts = [...document.querySelectorAll('#analystToggles input:checked')].map(i => i.value);
-  if (!analysts.length) { alert('Select at least one analyst.'); return; }
-
-  // Reset UI
-  reports = {}; activeTab = null; _activityCount = 0;
-  document.getElementById('tabBar').innerHTML = '';
-  document.getElementById('tabContent').innerHTML = '<div class="theme-muted text-sm text-center py-8">Waiting for first agent…</div>';
-  document.getElementById('decisionCard').classList.add('hidden');
-  document.getElementById('activityLog').innerHTML = '';
-  document.getElementById('activityCount').textContent = '';
-  document.getElementById('activityPanel').classList.remove('hidden');
-  setStatus('');
-  stopGlobalTimer();
-  resetPipeline();
-
-  const btn = document.getElementById('runBtn');
-  btn.disabled = true; btn.textContent = 'Running…';
-
-  if (currentSource) { currentSource.close(); currentSource = null; }
-
-  // Field names must match AnalysisRequest in webui/app.py
-  const payload = {
-    ticker,
-    date:              tradeDate,
-    analysts,
-    provider:          document.getElementById('provider').value,
-    quick_model:       document.getElementById('quickModel').value,
-    deep_model:        document.getElementById('deepModel').value,
-    max_debate_rounds: parseInt(document.getElementById('debateRounds').value) || 1,
-    language:          document.getElementById('language').value,
-    checkpoint:        document.getElementById('checkpoint').checked,
-  };
-
-  let runId;
-  try {
-    const res  = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-    const data = await res.json();
-    runId = data.run_id;
-  } catch(e) { alert('Failed to start: ' + e.message); resetBtn(); return; }
-
-  analysts.forEach(a => updateStage(a, 'running'));
-  startGlobalTimer();
-
-  currentSource = new EventSource(`/api/stream/${runId}`);
-
-  // Backend sends generic SSE messages; dispatch on the `type` field
-  currentSource.onmessage = e => {
-    let d; try { d = JSON.parse(e.data); } catch { return; }
-
-    if (d.type === 'progress') {
-      renderProgress(d);
-
-    } else if (d.type === 'status') {
-      setStatus(d.message);
-
-    } else if (d.type === 'report') {
-      setStatus(d.agent + ' completed');
-      reports[d.field] = { label: d.agent, content: d.content };
-      addTab(d.field, d.agent);
-      updateTabContent(d.field);
-
-      const stageKey = FIELD_TO_STAGE[d.field];
-      if (stageKey) {
-        updateStage(stageKey, 'done');
-        // Research Manager completion implicitly means Bull + Bear finished
-        if (stageKey === 'research_mgr') { updateStage('bull','done'); updateStage('bear','done'); }
-        // Portfolio Manager completion means all risk agents finished
-        if (stageKey === 'portfolio')    { ['aggressive','conservative','neutral'].forEach(k => updateStage(k,'done')); }
-      }
-      markNextRunning(stageKey, analysts);
-
-    } else if (d.type === 'complete') {
-      stopGlobalTimer();
-      setStatus('Analysis complete ✓');
-      document.getElementById('activityPanel').classList.add('hidden');
-      showDecisionCard(d.ticker, d.date, d.decision, d.stats);
-      currentSource.close();
-      resetBtn();
-      PIPELINE_STAGES.forEach(s => { if (stageStatus[s.key] !== 'done') updateStage(s.key,'done'); });
-
-    } else if (d.type === 'error') {
-      stopGlobalTimer();
-      setStatus('⚠ ' + d.message);
-      alert('Error: ' + (d.message || 'Unknown error'));
-      currentSource.close(); resetBtn();
-
-    } else if (d.type === 'done') {
-      currentSource.close();
+      closeList();
+      if (inCode) html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+      return html.join("");
     }
-  };
-  currentSource.onerror = () => { resetBtn(); };
-}
 
-function markNextRunning(completedKey, selectedAnalysts) {
-  const order = [
-    ...['market','social','news','fundamentals'].filter(a => selectedAnalysts.includes(a)),
-    'bull','bear','research_mgr','trader','aggressive','conservative','neutral','portfolio',
-  ];
-  const idx = order.indexOf(completedKey);
-  if (idx >= 0 && idx + 1 < order.length) {
-    const next = order[idx + 1];
-    if (stageStatus[next] === 'pending') updateStage(next, 'running');
-  }
-}
+    function inlineMarkdown(value) {
+      return escapeHtml(value)
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    }
 
-function showDecisionCard(ticker, date, signal, stats) {
-  const card = document.getElementById('decisionCard');
-  card.classList.remove('hidden');
-  document.getElementById('decisionTicker').textContent = ticker;
-  document.getElementById('decisionDate').textContent   = `Analysis date: ${date}`;
+    function isTableRow(line) {
+      return line.includes("|") && splitTableRow(line).length > 1;
+    }
 
-  const badge = document.getElementById('ratingBadge');
-  const style  = RATING_STYLES[signal] || RATING_STYLES['Hold'];
-  badge.className  = `text-2xl font-bold px-6 py-3 rounded-xl border ${style.bg} ${style.border} ${style.text}`;
-  badge.textContent = signal;
+    function isTableDivider(line) {
+      return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+    }
 
-  // Summary: first few meaningful lines of the final decision
-  const decision = reports['final_trade_decision']?.content || '';
-  const summary  = decision.split('\n').filter(l => l.trim()).slice(0, 4).join('\n');
-  document.getElementById('decisionSummary').innerHTML = marked.parse(summary);
+    function splitTableRow(line) {
+      return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
+    }
 
-  // Show run stats if available
-  if (stats) {
-    const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n||0);
-    document.getElementById('runStats').textContent =
-      `LLM calls: ${stats.llm_calls}  ·  Tool calls: ${stats.tool_calls}  ·  Tokens in: ${fmt(stats.tokens_in)}  ·  Tokens out: ${fmt(stats.tokens_out)}`;
-    document.getElementById('runStats').classList.remove('hidden');
-  }
+    function highlightSearch(container, query) {
+      const nodes = [];
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      let count = 0;
+      const search = query.toLowerCase();
+      nodes.forEach(node => {
+        const text = node.nodeValue;
+        const lower = text.toLowerCase();
+        if (!lower.includes(search)) return;
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+        let index;
+        while ((index = lower.indexOf(search, cursor)) !== -1) {
+          fragment.append(document.createTextNode(text.slice(cursor, index)));
+          const mark = document.createElement("mark");
+          mark.textContent = text.slice(index, index + query.length);
+          fragment.append(mark);
+          cursor = index + query.length;
+          count += 1;
+        }
+        fragment.append(document.createTextNode(text.slice(cursor)));
+        node.replaceWith(fragment);
+      });
+      return count;
+    }
 
-  // Auto-switch to final decision tab
-  if (reports['final_trade_decision']) showTab('final_trade_decision');
-}
+    function clearFieldErrors() {
+      document.querySelectorAll(".field-error").forEach(element => { element.textContent = ""; });
+      document.querySelectorAll('[aria-invalid="true"]').forEach(element => element.removeAttribute("aria-invalid"));
+    }
 
-function setStatus(msg) {
-  const el = document.getElementById('statusText');
-  if (el) el.textContent = msg;
-}
+    function setFieldError(id, message) {
+      byId(id).setAttribute("aria-invalid", "true");
+      byId(`${id}Error`).textContent = message;
+    }
 
-function resetBtn() {
-  const btn = document.getElementById('runBtn');
-  btn.disabled = false; btn.textContent = 'Run Analysis';
-}
-</script>
+    function setStatus(message, tone = "") {
+      byId("statusText").textContent = message;
+      byId("statusDot").className = `status-dot ${tone}`;
+    }
+
+    function showNotice(message, type = "warning", autoHide = false) {
+      clearTimeout(noticeTimer);
+      byId("noticeMessage").textContent = message;
+      byId("notice").className = `notice ${type}`;
+      if (autoHide) noticeTimer = setTimeout(hideNotice, 5000);
+    }
+
+    function hideNotice() {
+      byId("notice").classList.add("hidden");
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      byId("elapsedTimer").classList.remove("hidden");
+      timerInterval = setInterval(() => {
+        byId("elapsedTimer").textContent = formatElapsed(Date.now() - startTime);
+        Object.entries(stageStart).forEach(([key, started]) => {
+          if (stageStatus[key] === "running") {
+            const time = byId(`stage-${key}`)?.querySelector(".stage-time");
+            if (time) time.textContent = formatElapsed(Date.now() - started);
+          }
+        });
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      byId("elapsedTimer").classList.add("hidden");
+    }
+
+    function formatElapsed(milliseconds) {
+      const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return minutes ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    }
+
+    function formatNumber(value) {
+      const number = Number(value || 0);
+      if (number >= 1000000) return `${(number / 1000000).toFixed(1)}m`;
+      if (number >= 1000) return `${(number / 1000).toFixed(1)}k`;
+      return String(number);
+    }
+
+    function formatInputDate(value) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, "0");
+      const day = String(value.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function apiErrorMessage(data, status) {
+      if (Array.isArray(data.detail)) return data.detail.map(item => item.msg).join(" ");
+      if (typeof data.detail === "string") return data.detail;
+      return `Request failed (${status})`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    async function copyText(text, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showNotice(successMessage, "success", true);
+      } catch {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+        showNotice(successMessage, "success", true);
+      }
+    }
+
+    function downloadText(filename, text) {
+      const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function safeFilename(value) {
+      return String(value || "report").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "");
+    }
+
+    function ratingClass(signal) {
+      return String(signal || "Hold").toLowerCase().replace(/\s+/g, "-");
+    }
+
+    function saveConfig(payload) {
+      localStorage.setItem("ta-config", JSON.stringify(payload));
+    }
+
+    function restoreConfig() {
+      let saved;
+      try { saved = JSON.parse(localStorage.getItem("ta-config") || "null"); } catch { saved = null; }
+      if (!saved) return;
+      byId("ticker").value = saved.ticker || byId("ticker").value;
+      byId("tradeDate").value = saved.date && saved.date <= formatInputDate(new Date()) ? saved.date : byId("tradeDate").value;
+      if (saved.provider && byId("provider").querySelector(`option[value="${CSS.escape(saved.provider)}"]`)) byId("provider").value = saved.provider;
+      updateModelSelects(saved.quick_model, saved.deep_model);
+      document.querySelectorAll("#analystToggles input").forEach(input => { input.checked = (saved.analysts || []).includes(input.value); });
+      byId("debateRounds").value = saved.max_debate_rounds || 1;
+      byId("riskRounds").value = saved.max_risk_discuss_rounds || 1;
+      if (saved.language && Array.from(byId("language").options).some(option => option.value === saved.language)) byId("language").value = saved.language;
+      byId("checkpoint").checked = Boolean(saved.checkpoint);
+      document.querySelectorAll('input[name="preset"]').forEach(input => { input.checked = false; });
+    }
+
+    function prefersReducedMotion() {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+  </script>
 </body>
 </html>

@@ -16,6 +16,8 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_MAX_DEBATE_ROUNDS":    "max_debate_rounds",
     "TRADINGAGENTS_MAX_RISK_ROUNDS":      "max_risk_discuss_rounds",
     "TRADINGAGENTS_CHECKPOINT_ENABLED":   "checkpoint_enabled",
+    "TRADINGAGENTS_ANALYSIS_HISTORY_ENABLED": "analysis_history_enabled",
+    "TRADINGAGENTS_ANALYSIS_HISTORY_DIR": "analysis_history_dir",
     "TRADINGAGENTS_BENCHMARK_TICKER":     "benchmark_ticker",
     "TRADINGAGENTS_CRYPTO_QUOTE_CURRENCY": "crypto_quote_currency",
     "TRADINGAGENTS_CRYPTO_BENCHMARK_TICKER": "crypto_benchmark_ticker",
@@ -52,6 +54,10 @@ DEFAULT_CONFIG = _apply_env_overrides({
     # the oldest resolved entries are pruned once this limit is exceeded.
     # Pending entries are never pruned. None disables rotation entirely.
     "memory_log_max_entries": None,
+    # Durable WebUI analysis history. When ``analysis_history_dir`` is
+    # None, history is stored under ``results_dir/analysis_history``.
+    "analysis_history_enabled": True,
+    "analysis_history_dir": None,
     # LLM settings
     "llm_provider": "openai",
     "deep_think_llm": "gpt-5.4",
@@ -69,8 +75,8 @@ DEFAULT_CONFIG = _apply_env_overrides({
     # Checkpoint/resume: when True, LangGraph saves state after each node
     # so a crashed run can resume from the last successful step.
     "checkpoint_enabled": False,
-    # Output language for analyst reports and final decision
-    # Internal agent debate stays in English for reasoning quality
+    # Presentation language for returned, displayed, and streamed reports.
+    # Agents, graph state, signals, logs, and memory remain canonical English.
     "output_language": "English",
     # Crypto support. Bare common crypto symbols (BTC, ETH, SOL, etc.) are
     # normalised to Yahoo Finance pairs using this quote currency.

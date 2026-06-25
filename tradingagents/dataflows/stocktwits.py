@@ -21,6 +21,8 @@ from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from tradingagents.dataflows.crypto_utils import stocktwits_symbol
+
 logger = logging.getLogger(__name__)
 
 _API = "https://api.stocktwits.com/api/2/streams/symbol/{ticker}.json"
@@ -35,18 +37,19 @@ def fetch_stocktwits_messages(ticker: str, limit: int = 30, timeout: float = 10.
     symbol has no messages, or the response shape is unexpected — the
     caller never has to special-case None or exceptions.
     """
-    url = _API.format(ticker=ticker.upper())
+    request_symbol = stocktwits_symbol(ticker)
+    url = _API.format(ticker=request_symbol)
     req = Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
     try:
         with urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read())
     except (HTTPError, URLError, json.JSONDecodeError, TimeoutError) as exc:
-        logger.warning("StockTwits fetch failed for %s: %s", ticker, exc)
+        logger.warning("StockTwits fetch failed for %s: %s", request_symbol, exc)
         return f"<stocktwits unavailable: {type(exc).__name__}>"
 
     messages = data.get("messages", []) if isinstance(data, dict) else []
     if not messages:
-        return f"<no StockTwits messages found for ${ticker.upper()}>"
+        return f"<no StockTwits messages found for ${request_symbol}>"
 
     lines = []
     bullish = bearish = unlabeled = 0
