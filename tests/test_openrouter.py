@@ -74,6 +74,46 @@ def test_catalog_filters_models_by_graph_role(monkeypatch):
     assert "$1/$2 per 1M" in quick[0][0]
 
 
+def test_catalog_prioritizes_researched_openrouter_value_models(monkeypatch):
+    models = [
+        _model(
+            "vendor/full",
+            parameters=["tools", "structured_outputs", "response_format"],
+        ),
+        _model(
+            "qwen/qwen3.7-max",
+            parameters=["tools", "structured_outputs", "response_format"],
+        ),
+        _model(
+            "qwen/qwen3.7-plus",
+            parameters=["tools", "structured_outputs", "response_format"],
+        ),
+        _model(
+            "deepseek/deepseek-v4-pro",
+            parameters=["tools", "structured_outputs", "response_format"],
+        ),
+        _model(
+            "deepseek/deepseek-v4-flash",
+            parameters=["tools", "structured_outputs", "response_format"],
+        ),
+    ]
+    monkeypatch.setattr(
+        openrouter_catalog, "fetch_openrouter_models", lambda **kwargs: models
+    )
+
+    quick = openrouter_catalog.get_openrouter_model_options("quick")
+    deep = openrouter_catalog.get_openrouter_model_options("deep")
+
+    assert [value for _, value in quick[:2]] == [
+        "deepseek/deepseek-v4-flash",
+        "qwen/qwen3.7-plus",
+    ]
+    assert [value for _, value in deep[:2]] == [
+        "deepseek/deepseek-v4-pro",
+        "qwen/qwen3.7-max",
+    ]
+
+
 def test_catalog_request_uses_auth_attribution_and_cache(monkeypatch):
     response = MagicMock()
     response.json.return_value = {
@@ -165,6 +205,26 @@ def test_cli_requests_role_specific_openrouter_models(monkeypatch):
 
     assert cli_utils.select_openrouter_model("quick") == "vendor/tool-model"
     assert captured["mode"] == "quick"
+
+
+def test_cli_uses_recommended_openrouter_models_when_catalog_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        cli_utils,
+        "get_openrouter_model_options",
+        MagicMock(side_effect=openrouter_catalog.OpenRouterCatalogError("offline")),
+    )
+
+    quick = cli_utils._fetch_openrouter_models("quick")
+    deep = cli_utils._fetch_openrouter_models("deep")
+
+    assert [value for _, value in quick[:2]] == [
+        "deepseek/deepseek-v4-flash",
+        "qwen/qwen3.7-plus",
+    ]
+    assert [value for _, value in deep[:2]] == [
+        "deepseek/deepseek-v4-pro",
+        "qwen/qwen3.7-max",
+    ]
 
 
 def test_webui_exposes_openrouter_models(monkeypatch):

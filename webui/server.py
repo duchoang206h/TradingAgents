@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import date
@@ -30,7 +32,10 @@ from tradingagents.llm_clients.openrouter_catalog import (  # noqa: E402
     OpenRouterCatalogError,
     get_openrouter_model_catalog,
 )
+from tradingagents.observability import AnalysisHistoryStore  # noqa: E402
 
+
+logger = logging.getLogger(__name__)
 
 _ANALYST_STAGES = ("market", "social", "news", "fundamentals")
 _PIPELINE_STAGES = (
@@ -44,6 +49,7 @@ _PIPELINE_STAGES = (
     "neutral",
     "portfolio",
 )
+_NON_REOPENABLE_STAGE_STATUSES = {"skipped", "cancelled", "error"}
 _NODE_TO_STAGE = {
     "Market Analyst": "market",
     "Social Analyst": "social",
@@ -221,10 +227,32 @@ def _push_stage(run_state: RunState, stage: str, status: str) -> None:
     if stage not in _PIPELINE_STAGES:
         return
     with run_state.stage_lock:
-        if run_state.stage_status.get(stage) == status:
+        current_status = run_state.stage_status.get(stage)
+        if status == "running" and current_status in _NON_REOPENABLE_STAGE_STATUSES:
+            return
+        if current_status == status:
             return
         run_state.stage_status[stage] = status
     run_state.queue.put({"type": "stage", "stage": stage, "status": status})
+
+
+def _start_stage(run_state: RunState, stage: str) -> None:
+    """Mark a graph node as active and close any previously active node."""
+    if stage not in _PIPELINE_STAGES:
+        return
+    with run_state.stage_lock:
+        current_status = run_state.stage_status.get(stage)
+        if current_status in _NON_REOPENABLE_STAGE_STATUSES:
+            return
+        running_stages = [
+            active_stage
+            for active_stage, active_status in run_state.stage_status.items()
+            if active_stage != stage and active_status == "running"
+        ]
+
+    for active_stage in running_stages:
+        _push_stage(run_state, active_stage, "done")
+    _push_stage(run_state, stage, "running")
 
 
 def _finish_stage_for_report(run_state: RunState, report_field: str) -> None:
@@ -253,6 +281,62 @@ def _finish_active_stages(run_state: RunState, status: str) -> None:
         _push_stage(run_state, stage, status)
 
 
+def _json_default(value: Any) -> Any:
+    """Serialize LangChain/Pydantic objects for browser events."""
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    if hasattr(value, "dict"):
+        return value.dict()
+    return str(value)
+
+
+def _history_store(config: dict[str, Any] | None = None) -> AnalysisHistoryStore | None:
+    cfg = config or DEFAULT_CONFIG
+    if not cfg.get("analysis_history_enabled", True):
+        return None
+    return AnalysisHistoryStore(cfg)
+
+
+def _record_history_report(
+    store: AnalysisHistoryStore | None,
+    *,
+    run_id: str,
+    field: str,
+    agent: str,
+    content: str,
+) -> None:
+    if store is None:
+        return
+    try:
+        store.save_report(
+            run_id=run_id,
+            field=field,
+            agent=agent,
+            content=content,
+        )
+    except Exception:
+        logger.exception("Could not save report history for run %s", run_id)
+
+
+def _record_history_terminal(
+    store: AnalysisHistoryStore | None,
+    *,
+    run_id: str,
+    status: str,
+    error: str | None = None,
+) -> None:
+    if store is None:
+        return
+    try:
+        store.fail_run(
+            run_id=run_id,
+            status="cancelled" if status == "cancelled" else "failed",
+            error=error or status,
+        )
+    except Exception:
+        logger.exception("Could not save terminal history for run %s", run_id)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
@@ -269,9 +353,71 @@ async def get_models():
     }
     try:
         models.update(await asyncio.to_thread(get_openrouter_model_catalog))
-    except OpenRouterCatalogError:
-        pass
+    except OpenRouterCatalogError as exc:
+        logger.warning("Could not fetch OpenRouter model catalog: %s", exc)
     return models
+
+
+@app.get("/api/history")
+async def get_history(
+    limit: int = 50,
+    ticker: str | None = None,
+    status: str | None = None,
+) -> list[dict[str, Any]]:
+    store = _history_store()
+    if store is None:
+        return []
+    try:
+        return await asyncio.to_thread(
+            store.list_runs,
+            limit=limit,
+            ticker=ticker,
+            status=status,
+        )
+    except Exception as exc:
+        logger.exception("Could not load analysis history")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/history/{run_id}")
+async def get_history_run(run_id: str) -> dict[str, Any]:
+    store = _history_store()
+    if store is None:
+        raise HTTPException(status_code=404, detail="Analysis history is disabled")
+    run = await asyncio.to_thread(store.get_run, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
+
+
+@app.get("/api/history/{run_id}/reports")
+async def get_history_reports(run_id: str) -> list[dict[str, Any]]:
+    store = _history_store()
+    if store is None:
+        return []
+    return await asyncio.to_thread(store.list_reports, run_id)
+
+
+@app.get("/api/history/{run_id}/reports/{field}")
+async def get_history_report(run_id: str, field: str) -> dict[str, str]:
+    store = _history_store()
+    if store is None:
+        raise HTTPException(status_code=404, detail="Analysis history is disabled")
+    content = await asyncio.to_thread(store.read_report, run_id, field)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"run_id": run_id, "field": field, "content": content}
+
+
+@app.delete("/api/history/{run_id}")
+async def delete_history_run(run_id: str) -> dict[str, bool]:
+    store = _history_store()
+    if store is None:
+        raise HTTPException(status_code=404, detail="Analysis history is disabled")
+    deleted = await asyncio.to_thread(store.delete_run, run_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return {"deleted": True}
 
 
 @app.post("/api/analyze")
@@ -285,6 +431,8 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
         run_state.queue.put(event)
 
     def run() -> None:
+        history_store: AnalysisHistoryStore | None = None
+        started_at = time.monotonic()
         try:
             selected_analysts = set(req.analysts)
             for stage in _PIPELINE_STAGES:
@@ -303,10 +451,35 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
             config["output_language"]       = req.language
             config["checkpoint_enabled"]    = req.checkpoint
 
+            try:
+                history_store = _history_store(config)
+                if history_store is not None:
+                    history_store.start_run(
+                        run_id=run_id,
+                        ticker=ticker,
+                        trade_date=req.date,
+                        provider=req.provider,
+                        quick_model=req.quick_model,
+                        deep_model=req.deep_model,
+                        analysts=req.analysts,
+                        payload=req.model_dump(mode="json"),
+                        config=config,
+                    )
+            except Exception:
+                logger.exception("Could not initialize analysis history for run %s", run_id)
+                history_store = None
+
             _push({"type": "status", "message": "Initializing analysis"})
+
+            def _handle_stage_callback(stage: str, status: str) -> None:
+                if status == "running":
+                    _start_stage(run_state, stage)
+                else:
+                    _push_stage(run_state, stage, status)
+
             stats = ProgressCallbackHandler(
                 _push,
-                lambda stage, status: _push_stage(run_state, stage, status),
+                _handle_stage_callback,
             )
             ta = TradingAgentsGraph(
                 selected_analysts=req.analysts,
@@ -320,12 +493,25 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
             for chunk in ta.propagate_stream(ticker, req.date, callbacks=[stats]):
                 if run_state.cancel_event.is_set():
                     _finish_active_stages(run_state, "cancelled")
+                    _record_history_terminal(
+                        history_store,
+                        run_id=run_id,
+                        status="cancelled",
+                        error="Analysis cancelled",
+                    )
                     _push({"type": "cancelled", "message": "Analysis cancelled"})
                     return
                 for report_field, agent_name in _REPORT_FIELDS.items():
                     val = chunk.get(report_field) or ""
                     if val and val != prev.get(report_field, ""):
                         _finish_stage_for_report(run_state, report_field)
+                        _record_history_report(
+                            history_store,
+                            run_id=run_id,
+                            field=report_field,
+                            agent=agent_name,
+                            content=val,
+                        )
                         _push(
                             {
                                 "type": "report",
@@ -338,6 +524,12 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
 
             if run_state.cancel_event.is_set():
                 _finish_active_stages(run_state, "cancelled")
+                _record_history_terminal(
+                    history_store,
+                    run_id=run_id,
+                    status="cancelled",
+                    error="Analysis cancelled",
+                )
                 _push({"type": "cancelled", "message": "Analysis cancelled"})
                 return
 
@@ -345,15 +537,40 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
             decision = ta.process_signal(
                 (ta.curr_state or {}).get("final_trade_decision", "")
             )
+            stats_payload = stats.get_stats()
+            if history_store is not None:
+                try:
+                    history_store.complete_run(
+                        run_id=run_id,
+                        decision=decision,
+                        stats=stats_payload,
+                        final_state=ta.curr_state,
+                        duration_ms=int((time.monotonic() - started_at) * 1000),
+                    )
+                except Exception:
+                    logger.exception("Could not complete analysis history for run %s", run_id)
             _push({
                 "type": "complete",
                 "decision": decision,
                 "ticker": ticker,
                 "date": req.date,
-                "stats": stats.get_stats(),
+                "run_id": run_id,
+                "stats": stats_payload,
             })
 
         except Exception as exc:
+            logger.exception(
+                "WebUI analysis run %s failed for %s on %s",
+                run_id,
+                req.ticker,
+                req.date,
+            )
+            _record_history_terminal(
+                history_store,
+                run_id=run_id,
+                status="failed",
+                error=str(exc),
+            )
             _finish_active_stages(run_state, "error")
             _push({"type": "error", "message": str(exc)})
         finally:
@@ -396,7 +613,21 @@ async def stream_job(run_id: str) -> StreamingResponse:
                 with _runs_lock:
                     _runs.pop(run_id, None)
                 break
-            yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+            try:
+                payload = json.dumps(
+                    item,
+                    ensure_ascii=False,
+                    default=_json_default,
+                )
+            except TypeError:
+                logger.exception("Could not serialize SSE event for run %s", run_id)
+                payload = json.dumps(
+                    {
+                        "type": "error",
+                        "message": "Server could not serialize a progress event.",
+                    }
+                )
+            yield f"data: {payload}\n\n"
 
     return StreamingResponse(
         _generate(),

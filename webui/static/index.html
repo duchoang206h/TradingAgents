@@ -471,6 +471,7 @@
     .history-signal.buy, .history-signal.overweight { border-color: color-mix(in srgb, var(--success) 50%, var(--border)); background: var(--success-soft); color: var(--success); }
     .history-signal.hold { border-color: color-mix(in srgb, var(--warning) 50%, var(--border)); background: var(--warning-soft); color: var(--warning); }
     .history-signal.sell, .history-signal.underweight { border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); background: var(--danger-soft); color: var(--danger); }
+    .history-actions { display: flex; flex-wrap: wrap; gap: 7px; }
     .history-empty { padding: 24px 18px; color: var(--text-muted); font-size: 12px; text-align: center; }
 
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
@@ -759,8 +760,8 @@
       <section class="panel" aria-labelledby="historyTitle">
         <div class="panel-header report-header">
           <div>
-            <h2 id="historyTitle" class="panel-title">Recent decisions</h2>
-            <span class="panel-meta">Stored locally in this browser</span>
+            <h2 id="historyTitle" class="panel-title">Analysis history</h2>
+            <span class="panel-meta">Stored on this server</span>
           </div>
           <div class="history-controls">
             <label>
@@ -816,14 +817,13 @@
       trader_investment_plan: "Trader",
       final_trade_decision: "Portfolio manager",
     };
+    const REPORT_ORDER = Object.keys(REPORT_LABELS);
 
     const PRESETS = {
       quick: { analysts: ["market", "news"], debate: 1, risk: 1, label: "quick" },
       standard: { analysts: ["market", "social", "news", "fundamentals"], debate: 1, risk: 1, label: "standard" },
       deep: { analysts: ["market", "social", "news", "fundamentals"], debate: 3, risk: 3, label: "deep" },
     };
-    const RUN_HISTORY_KEY = "ta-run-history";
-
     let models = {};
     let reports = {};
     let activeTab = null;
@@ -853,7 +853,7 @@
       await loadModels();
       restoreConfig();
       updateConfigSummary();
-      renderRunHistory();
+      await renderRunHistory();
     });
 
     function initTheme() {
@@ -908,7 +908,7 @@
       });
       ["ticker", "tradeDate", "language", "checkpoint"].forEach(id => byId(id).addEventListener("change", updateConfigSummary));
       byId("provider").addEventListener("change", () => {
-        updateModelSelects();
+        updateModelSelects(null, null);
         updateConfigSummary();
       });
       ["quickModel", "deepModel"].forEach(id => {
@@ -941,11 +941,7 @@
       });
       byId("tabBar").addEventListener("keydown", handleTabKeys);
       byId("historyFilter").addEventListener("change", renderRunHistory);
-      byId("clearHistoryBtn").addEventListener("click", () => {
-        localStorage.removeItem(RUN_HISTORY_KEY);
-        renderRunHistory();
-        showNotice("Recent decisions cleared", "success", true);
-      });
+      byId("clearHistoryBtn").addEventListener("click", clearRunHistory);
     }
 
     async function loadModels() {
@@ -971,7 +967,7 @@
 
     function fillModelSelect(id, options, preferred) {
       const select = byId(id);
-      const previous = preferred || select.value;
+      const previous = preferred === undefined ? select.value : preferred;
       select.replaceChildren();
       const normalized = options && options.length ? options : [["Custom model ID", "custom"]];
       normalized.forEach(([label, value]) => select.add(new Option(label, value)));
@@ -1178,29 +1174,34 @@
     }
 
     function resetRunUi(analysts) {
-      reports = {};
-      activeTab = null;
       activityCount = 0;
       expectedReportCount = analysts.length + 3;
       stageStart = {};
-      byId("emptyState").classList.add("hidden");
-      byId("decisionCard").classList.add("hidden");
+      resetReportsWorkspace(expectedReportCount, "Waiting for the first completed report.");
       byId("activityPanel").classList.remove("hidden");
       byId("activityPanel").open = true;
       byId("activityLog").replaceChildren();
       byId("activityCount").textContent = "0 events";
-      byId("tabBar").replaceChildren();
-      byId("tabBar").classList.add("hidden");
-      byId("reportTools").classList.add("hidden");
-      byId("reportSearch").value = "";
-      byId("matchCount").textContent = "";
-      byId("tabContent").innerHTML = '<div class="report-placeholder">Waiting for the first completed report.</div>';
-      byId("reportCount").textContent = `0 of ${expectedReportCount} complete`;
       byId("retryBtn").classList.add("hidden");
       PIPELINE_STAGES.forEach(stage => {
         const status = ["market", "social", "news", "fundamentals"].includes(stage.key) && !analysts.includes(stage.key) ? "skipped" : "queued";
         updateStage(stage.key, status);
       });
+    }
+
+    function resetReportsWorkspace(expectedCount, placeholder) {
+      reports = {};
+      activeTab = null;
+      expectedReportCount = expectedCount;
+      byId("emptyState").classList.add("hidden");
+      byId("decisionCard").classList.add("hidden");
+      byId("tabBar").replaceChildren();
+      byId("tabBar").classList.add("hidden");
+      byId("reportTools").classList.add("hidden");
+      byId("reportSearch").value = "";
+      byId("matchCount").textContent = "";
+      byId("tabContent").innerHTML = `<div class="report-placeholder">${escapeHtml(placeholder)}</div>`;
+      byId("reportCount").textContent = `0 of ${expectedReportCount} complete`;
     }
 
     function setRunning(running) {
@@ -1211,6 +1212,7 @@
       byId("cancelBtn").disabled = false;
       byId("cancelBtn").textContent = "Cancel";
       document.querySelectorAll(".history-run-button").forEach(button => { button.disabled = running; });
+      document.querySelectorAll(".history-view-button").forEach(button => { button.disabled = running; });
     }
 
     function finishRun(message, tone, retryable) {
@@ -1385,7 +1387,9 @@
       const summary = decision.split("\n").filter(line => line.trim()).slice(0, 7).join("\n");
       byId("decisionSummary").innerHTML = renderMarkdown(summary || `Final signal: **${signal}**`);
       const stats = data.stats || {};
-      byId("metricDuration").textContent = startTime ? formatElapsed(Date.now() - startTime) : "-";
+      byId("metricDuration").textContent = data.duration_ms != null
+        ? formatElapsed(data.duration_ms)
+        : startTime ? formatElapsed(Date.now() - startTime) : "-";
       byId("metricLlm").textContent = formatNumber(stats.llm_calls);
       byId("metricTools").textContent = formatNumber(stats.tool_calls);
       byId("metricTokensIn").textContent = formatNumber(stats.tokens_in);
@@ -1394,39 +1398,25 @@
       card.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
     }
 
-    function loadRunHistory() {
+    async function loadRunHistory() {
       try {
-        const history = JSON.parse(localStorage.getItem(RUN_HISTORY_KEY) || "[]");
+        const response = await fetch("/api/history?limit=100");
+        if (!response.ok) throw new Error(`History request failed (${response.status})`);
+        const history = await response.json();
         return Array.isArray(history) ? history : [];
       } catch {
+        showNotice("Analysis history could not be loaded.", "warning");
         return [];
       }
     }
 
     function saveRunHistory(data) {
-      if (!lastPayload) return;
-      const history = loadRunHistory();
-      const record = {
-        ticker: data.ticker || lastPayload.ticker,
-        date: data.date || lastPayload.date,
-        decision: String(data.decision || "Hold"),
-        duration_ms: startTime ? Date.now() - startTime : 0,
-        stats: data.stats || {},
-        provider: lastPayload.provider,
-        payload: lastPayload,
-        completed_at: new Date().toISOString(),
-      };
-      const deduplicated = history.filter(item => !(
-        item.ticker === record.ticker &&
-        item.date === record.date &&
-        item.provider === record.provider
-      ));
-      localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify([record, ...deduplicated].slice(0, 12)));
-      renderRunHistory();
+      void data;
+      void renderRunHistory();
     }
 
-    function renderRunHistory() {
-      const history = loadRunHistory();
+    async function renderRunHistory() {
+      const history = await loadRunHistory();
       const filter = byId("historyFilter");
       const selected = filter.value;
       const tickers = Array.from(new Set(history.map(item => item.ticker).filter(Boolean))).sort();
@@ -1445,19 +1435,31 @@
         const ticker = document.createElement("td");
         ticker.textContent = record.ticker || "-";
         const analysisDate = document.createElement("td");
-        analysisDate.textContent = record.date || "-";
+        analysisDate.textContent = record.trade_date || record.date || "-";
         const decision = document.createElement("td");
         const signal = document.createElement("span");
-        signal.className = `history-signal ${ratingClass(record.decision)}`;
-        signal.textContent = record.decision || "Hold";
+        const decisionText = record.decision || record.status || "Hold";
+        signal.className = `history-signal ${ratingClass(decisionText)}`;
+        signal.textContent = decisionText;
         decision.appendChild(signal);
         const duration = document.createElement("td");
         duration.textContent = formatElapsed(record.duration_ms || 0);
         const tokens = document.createElement("td");
-        tokens.textContent = formatNumber((record.stats?.tokens_in || 0) + (record.stats?.tokens_out || 0));
+        tokens.textContent = formatNumber((record.tokens_in || 0) + (record.tokens_out || 0));
         const provider = document.createElement("td");
         provider.textContent = record.provider || "-";
         const action = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "history-actions";
+        const view = document.createElement("button");
+        view.type = "button";
+        view.className = "secondary-button history-view-button";
+        view.textContent = "View";
+        view.disabled = Boolean(currentRunId);
+        view.addEventListener("click", () => {
+          if (currentRunId) return;
+          loadHistoryRun(record);
+        });
         const rerun = document.createElement("button");
         rerun.type = "button";
         rerun.className = "secondary-button history-run-button";
@@ -1468,10 +1470,86 @@
           applyPayloadToForm(record.payload);
           startAnalysis(record.payload);
         });
-        action.appendChild(rerun);
+        actions.append(view, rerun);
+        action.appendChild(actions);
         row.append(ticker, analysisDate, decision, duration, tokens, provider, action);
         body.appendChild(row);
       });
+    }
+
+    async function loadHistoryRun(record) {
+      if (!record.run_id) return;
+      closeSource();
+      stopTimer();
+      currentRunId = null;
+      setRunning(false);
+      setStatus(`Loading saved analysis for ${record.ticker || "run"}`, "running");
+      byId("activityPanel").classList.add("hidden");
+
+      try {
+        const reportResponse = await fetch(`/api/history/${encodeURIComponent(record.run_id)}/reports`);
+        if (!reportResponse.ok) throw new Error(`Report index request failed (${reportResponse.status})`);
+        const reportIndex = await reportResponse.json();
+        const ordered = Array.isArray(reportIndex)
+          ? reportIndex.slice().sort((a, b) => (
+              (REPORT_ORDER.includes(a.field) ? REPORT_ORDER.indexOf(a.field) : REPORT_ORDER.length) -
+              (REPORT_ORDER.includes(b.field) ? REPORT_ORDER.indexOf(b.field) : REPORT_ORDER.length)
+            ))
+          : [];
+
+        resetReportsWorkspace(Math.max(ordered.length, 1), "Loading saved reports.");
+
+        const loadedReports = await Promise.all(ordered.map(async item => {
+          const response = await fetch(
+            `/api/history/${encodeURIComponent(record.run_id)}/reports/${encodeURIComponent(item.field)}`
+          );
+          if (!response.ok) throw new Error(`Report request failed (${response.status})`);
+          const data = await response.json();
+          return {
+            field: item.field,
+            label: item.agent || REPORT_LABELS[item.field] || item.field,
+            content: String(data.content || ""),
+          };
+        }));
+
+        loadedReports.forEach(item => {
+          reports[item.field] = { label: item.label, content: item.content };
+          addReportTab(item.field);
+        });
+        updateReportCount();
+
+        showDecision({
+          ticker: record.ticker,
+          date: record.trade_date || record.date,
+          decision: record.decision || record.status || "Hold",
+          duration_ms: record.duration_ms || 0,
+          stats: {
+            llm_calls: record.llm_calls || 0,
+            tool_calls: record.tool_calls || 0,
+            tokens_in: record.tokens_in || 0,
+            tokens_out: record.tokens_out || 0,
+          },
+        });
+
+        setStatus(`Viewing saved analysis for ${record.ticker || "run"}`, "success");
+      } catch (error) {
+        showNotice(error.message || "Saved analysis could not be loaded.", "error");
+        setStatus("Saved analysis could not be loaded", "error");
+      }
+    }
+
+    async function clearRunHistory() {
+      const history = await loadRunHistory();
+      if (!history.length) return;
+      try {
+        await Promise.all(history.map(record => (
+          fetch(`/api/history/${encodeURIComponent(record.run_id)}`, { method: "DELETE" })
+        )));
+        await renderRunHistory();
+        showNotice("Recent decisions cleared", "success", true);
+      } catch {
+        showNotice("Recent decisions could not be cleared.", "error");
+      }
     }
 
     function applyPayloadToForm(payload) {

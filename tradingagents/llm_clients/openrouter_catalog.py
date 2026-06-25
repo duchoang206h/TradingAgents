@@ -9,7 +9,11 @@ from typing import Any
 
 import requests
 
-from .model_catalog import ModelOption, ProviderModeOptions
+from .model_catalog import (
+    OPENROUTER_RECOMMENDED_MODELS,
+    ModelOption,
+    ProviderModeOptions,
+)
 
 
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
@@ -147,6 +151,13 @@ def _options_for_mode(
     compatible = [
         _model_option(model) for model in models if _supports_mode(model, mode)
     ]
+    recommended = [
+        value
+        for _, value in OPENROUTER_RECOMMENDED_MODELS.get(mode, [])
+        if value != "custom"
+    ]
+    priority = {model_id: index for index, model_id in enumerate(recommended)}
+    compatible.sort(key=lambda option: priority.get(option[1], len(priority)))
     return [*compatible[:limit], ("Custom model ID", "custom")]
 
 

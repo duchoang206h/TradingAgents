@@ -73,6 +73,36 @@ _MINIMAX_MODELS: Dict[str, List[ModelOption]] = {
 }
 
 
+OPENROUTER_RECOMMENDED_MODELS: Dict[str, List[ModelOption]] = {
+    "quick": [
+        (
+            "DeepSeek V4 Flash - Efficient quick default, 1M ctx, "
+            "$0.09/$0.18 per 1M",
+            "deepseek/deepseek-v4-flash",
+        ),
+        (
+            "Qwen3.7 Plus - Strong quick/coding fallback, 1M ctx, "
+            "$0.32/$1.28 per 1M",
+            "qwen/qwen3.7-plus",
+        ),
+        ("Custom model ID", "custom"),
+    ],
+    "deep": [
+        (
+            "DeepSeek V4 Pro - Best-value deep default, 1M ctx, "
+            "$0.435/$0.87 per 1M",
+            "deepseek/deepseek-v4-pro",
+        ),
+        (
+            "Qwen3.7 Max - Stronger coding/reasoning fallback, 1M ctx, "
+            "$1.25/$3.75 per 1M",
+            "qwen/qwen3.7-max",
+        ),
+        ("Custom model ID", "custom"),
+    ],
+}
+
+
 MODEL_OPTIONS: ProviderModeOptions = {
     "openai": {
         "quick": [
@@ -154,12 +184,9 @@ MODEL_OPTIONS: ProviderModeOptions = {
     "minimax": _MINIMAX_MODELS,
     "minimax-cn": _MINIMAX_MODELS,
     # OpenRouter's compatible choices are fetched dynamically by the CLI
-    # and WebUI. Keeping a custom-only fallback here also makes the provider
-    # available when the remote catalog cannot be reached.
-    "openrouter": {
-        "quick": [("Custom model ID", "custom")],
-        "deep": [("Custom model ID", "custom")],
-    },
+    # and WebUI. These researched value defaults remain available when
+    # the remote catalog cannot be reached.
+    "openrouter": OPENROUTER_RECOMMENDED_MODELS,
     # Azure accepts any deployed model name.
     # Ollama display labels intentionally omit a "local" marker — the
     # endpoint is now configurable via OLLAMA_BASE_URL, so the same labels

@@ -157,7 +157,7 @@ def _fetch_openrouter_models(mode: str) -> List[Tuple[str, str]]:
         console.print(
             f"\n[yellow]Could not fetch OpenRouter models: {exc}[/yellow]"
         )
-        return [("Custom model ID", "custom")]
+        return get_model_options("openrouter", mode)
 
 
 def select_openrouter_model(mode: str) -> str:
