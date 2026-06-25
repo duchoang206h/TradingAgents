@@ -5,31 +5,40 @@ the old version had a prompt that demanded social-media analysis but the
 only tool available was Yahoo Finance news — which led LLMs to fabricate
 Reddit/X/StockTwits content under prompt pressure (verified live).
 
-The redesigned agent pre-fetches complementary data sources before the LLM is
-invoked and injects them into the prompt as structured blocks:
+The redesigned agent pre-fetches three complementary data sources before
+the LLM is invoked and injects them into the prompt as structured blocks:
 
   1. News headlines     — Yahoo Finance (institutional framing)
   2. StockTwits messages — retail-trader posts indexed by cashtag, with
                            user-labeled Bullish/Bearish sentiment tags
   3. Reddit posts        — r/wallstreetbets, r/stocks, r/investing
-  4. CoinGecko context   — crypto-only market attention and liquidity context
 
 The agent does not use tool-calling; the data is in the prompt from
-turn 0. The LLM produces the sentiment report in a single invocation.
+turn 0. Output uses the structured-output pattern (json_schema for
+OpenAI/xAI, response_schema for Gemini, tool-use for Anthropic), falling
+back to free-text generation for providers that lack native support, so
+the sentiment header (band + score + confidence) is deterministic across
+runs and providers instead of free-form per-model prose.
 
 See: https://github.com/TauricResearch/TradingAgents/issues/557
+See: https://github.com/TauricResearch/TradingAgents/issues/796
 """
 
 from datetime import datetime, timedelta
 
+from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+from tradingagents.agents.schemas import SentimentReport, render_sentiment_report
 from tradingagents.agents.utils.agent_utils import (
-    build_instrument_context,
+    get_instrument_context_from_state,
     get_language_instruction,
     get_news,
 )
-from tradingagents.dataflows.coingecko import fetch_coingecko_crypto_context
-from tradingagents.dataflows.crypto_utils import is_crypto_symbol
+from tradingagents.agents.utils.structured import (
+    bind_structured,
+    invoke_structured_or_freetext,
+)
 from tradingagents.dataflows.reddit import fetch_reddit_posts
 from tradingagents.dataflows.stocktwits import fetch_stocktwits_messages
 
@@ -41,27 +50,25 @@ def _seven_days_back(trade_date: str) -> str:
 def create_sentiment_analyst(llm):
     """Create a sentiment analyst node for the trading graph.
 
-    Pre-fetches news + StockTwits + Reddit data, plus crypto context when
-    applicable, injects them into the prompt as structured blocks, and
-    produces a sentiment report in a single LLM call.
+    Pre-fetches news + StockTwits + Reddit data, injects them into the
+    prompt as structured blocks, and produces a deterministic sentiment
+    report via structured output (with a free-text fallback for providers
+    that do not support it).
     """
+    structured_llm = bind_structured(llm, SentimentReport, "Sentiment Analyst")
 
     def sentiment_analyst_node(state):
         ticker = state["company_of_interest"]
         end_date = state["trade_date"]
         start_date = _seven_days_back(end_date)
-        instrument_context = build_instrument_context(ticker)
+        instrument_context = get_instrument_context_from_state(state)
 
-        # Pre-fetch all sources. Each fetcher degrades gracefully and returns a
-        # string, so the LLM always sees real data or a clear placeholder.
+        # Pre-fetch all three sources. Each fetcher degrades gracefully and
+        # returns a string (no exceptions surface from here), so the LLM
+        # always sees something — either real data or a clear placeholder.
         news_block = get_news.func(ticker, start_date, end_date)
         stocktwits_block = fetch_stocktwits_messages(ticker, limit=30)
         reddit_block = fetch_reddit_posts(ticker)
-        crypto_context_block = (
-            fetch_coingecko_crypto_context(ticker)
-            if is_crypto_symbol(ticker)
-            else ""
-        )
 
         system_message = _build_system_message(
             ticker=ticker,
@@ -70,7 +77,6 @@ def create_sentiment_analyst(llm):
             news_block=news_block,
             stocktwits_block=stocktwits_block,
             reddit_block=reddit_block,
-            crypto_context_block=crypto_context_block,
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -80,8 +86,8 @@ def create_sentiment_analyst(llm):
                     "You are a helpful AI assistant, collaborating with other assistants."
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    "\n{system_message}\n"
-                    "For your reference, the current date is {current_date}. {instrument_context}",
+                    " Today's date is {current_date}; treat it as 'now' for all analysis and tool-call date ranges. {instrument_context}"
+                    "\n{system_message}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
@@ -91,14 +97,22 @@ def create_sentiment_analyst(llm):
         prompt = prompt.partial(current_date=end_date)
         prompt = prompt.partial(instrument_context=instrument_context)
 
-        # No bind_tools — the data is already in the prompt; a single LLM
-        # call produces the report directly.
-        chain = prompt | llm
-        result = chain.invoke(state["messages"])
+        # Format the template into a concrete message list so the structured
+        # and free-text paths receive the same input. No bind_tools — the
+        # data is already in the prompt.
+        formatted_messages = prompt.format_messages(messages=state["messages"])
+
+        report_text = invoke_structured_or_freetext(
+            structured_llm,
+            llm,
+            formatted_messages,
+            render_sentiment_report,
+            "Sentiment Analyst",
+        )
 
         return {
-            "messages": [result],
-            "sentiment_report": result.content,
+            "messages": [AIMessage(content=report_text)],
+            "sentiment_report": report_text,
         }
 
     return sentiment_analyst_node
@@ -112,23 +126,9 @@ def _build_system_message(
     news_block: str,
     stocktwits_block: str,
     reddit_block: str,
-    crypto_context_block: str = "",
 ) -> str:
     """Assemble the sentiment-analyst system message with structured data blocks."""
-    crypto_section = ""
-    if crypto_context_block:
-        crypto_section = f"""
-### CoinGecko crypto context — market attention, liquidity, and community metrics
-Crypto-native context. Treat this as attention and market-structure evidence,
-not as a standalone sentiment source. It can strengthen or weaken confidence in
-social/news sentiment depending on volume, trend rank, and recent price action.
-
-<start_of_coingecko>
-{crypto_context_block}
-<end_of_coingecko>
-"""
-
-    return f"""You are a financial market sentiment analyst. Your task is to produce a comprehensive sentiment report for {ticker} covering the period from {start_date} to {end_date}, drawing on complementary data sources that have already been collected for you.
+    return f"""You are a financial market sentiment analyst. Your task is to produce a comprehensive sentiment report for {ticker} covering the period from {start_date} to {end_date}, drawing on three complementary data sources that have already been collected for you.
 
 ## Data sources (pre-fetched, in this prompt)
 
@@ -152,7 +152,6 @@ Community discussion. Engagement signal via upvote score and comment count. Subr
 <start_of_reddit>
 {reddit_block}
 <end_of_reddit>
-{crypto_section}
 
 ## How to analyze this data (best practices)
 
@@ -166,23 +165,20 @@ Community discussion. Engagement signal via upvote score and comment count. Subr
 
 5. **Identify recurring narrative themes.** What topic keeps coming up across sources? That's the dominant narrative driving current sentiment.
 
-6. **For crypto assets, use CoinGecko as context, not a substitute for sentiment.** Trending rank, volume, market cap rank, and recent price change can indicate attention or liquidity, but they do not prove bullish or bearish intent by themselves.
+6. **Be honest about data limits.** If StockTwits returned only a handful of messages, or one or more sources returned an "<unavailable>" placeholder, the sentiment read is less robust — flag this explicitly in the `confidence` field and the narrative. If the sources are silent on a given subreddit, say so.
 
-7. **Be honest about data limits.** If StockTwits returned only a handful of messages, or one or more sources returned an "<unavailable>" placeholder, the sentiment read is less robust — flag this caveat explicitly. If the sources are silent on a given subreddit, say so.
+7. **Identify catalysts and risks** that emerge across sources — news of upcoming earnings, product launches, competitive threats, macro headlines, etc.
 
-8. **Identify catalysts and risks** that emerge across sources — news of upcoming earnings, product launches, competitive threats, macro headlines, protocol upgrades, token unlocks, liquidity stress, regulatory events, or macro risk appetite shifts.
+8. **Past sentiment is not predictive.** Frame your conclusions as signal for the trader to weigh alongside fundamentals and technicals, not as a price call.
 
-9. **Past sentiment is not predictive.** Frame your conclusions as signal for the trader to weigh alongside fundamentals and technicals, not as a price call.
+## Output fields
 
-## Output
+Fill the following fields:
 
-Produce a sentiment report covering, in order:
-
-1. **Overall sentiment direction** — Bullish / Bearish / Neutral / Mixed — with a brief confidence note based on data quality and sample size.
-2. **Source-by-source breakdown** — what each of news / StockTwits / Reddit / CoinGecko context is telling you, with specific evidence (cite message counts, ratios, notable posts, and crypto context when available).
-3. **Divergences, alignments, and key narratives** across sources.
-4. **Catalysts and risks** surfaced by the data.
-5. **Markdown table** at the end summarizing key sentiment signals, their direction, source, and supporting evidence.
+- **overall_band**: Exactly one of Bullish / Mildly Bullish / Neutral / Mixed / Mildly Bearish / Bearish. Use Mixed when sources point in clearly different directions; Neutral only when all sources are genuinely silent.
+- **overall_score**: A number from 0 (maximally bearish) to 10 (maximally bullish); 5 is neutral. Keep it consistent with overall_band.
+- **confidence**: low / medium / high, based on data quality and sample size.
+- **narrative**: Full source-by-source breakdown, divergences, dominant narrative themes, catalysts and risks, and a markdown summary table of key sentiment signals (direction, source, supporting evidence).
 
 {get_language_instruction()}"""
 

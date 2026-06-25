@@ -1,7 +1,9 @@
+from typing import Annotated
+
 from langchain_core.tools import tool
-from typing import Annotated, Optional
-from tradingagents.dataflows.crypto_utils import is_crypto_symbol
+
 from tradingagents.dataflows.interface import route_to_vendor
+
 
 @tool
 def get_news(
@@ -24,8 +26,8 @@ def get_news(
 @tool
 def get_global_news(
     curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-    look_back_days: Annotated[Optional[int], "Days to look back; omit to use the configured default"] = None,
-    limit: Annotated[Optional[int], "Max articles to return; omit to use the configured default"] = None,
+    look_back_days: Annotated[int | None, "Days to look back; omit to use the configured default"] = None,
+    limit: Annotated[int | None, "Max articles to return; omit to use the configured default"] = None,
 ) -> str:
     """
     Retrieve global news data.
@@ -55,11 +57,4 @@ def get_insider_transactions(
     Returns:
         str: A report of insider transaction data
     """
-    if is_crypto_symbol(ticker):
-        return (
-            f"{ticker.upper()} is a crypto asset, so corporate insider "
-            "transaction data is not applicable. Consider token unlocks, "
-            "foundation/team wallet movements, exchange inflows/outflows, and "
-            "governance disclosures when crypto-specific feeds are configured."
-        )
     return route_to_vendor("get_insider_transactions", ticker)

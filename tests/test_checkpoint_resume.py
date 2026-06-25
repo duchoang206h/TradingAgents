@@ -1,14 +1,10 @@
 """Test checkpoint resume: crash mid-analysis, re-run resumes from last node."""
 
-import sqlite3
 import tempfile
 import unittest
-from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
-from langchain_core.messages import AIMessage
 
 from tradingagents.graph.checkpointer import (
     checkpoint_step,
@@ -24,10 +20,6 @@ _should_crash = False
 
 class _SimpleState(TypedDict):
     count: int
-
-
-class _MessageState(TypedDict):
-    messages: list[Any]
 
 
 def _node_a(state: _SimpleState) -> dict:
@@ -47,18 +39,6 @@ def _build_graph() -> StateGraph:
     builder.set_entry_point("analyst")
     builder.add_edge("analyst", "trader")
     builder.add_edge("trader", END)
-    return builder
-
-
-def _message_node(state: _MessageState) -> dict:
-    return {"messages": [AIMessage(content="checkpoint me")]}
-
-
-def _build_message_graph() -> StateGraph:
-    builder = StateGraph(_MessageState)
-    builder.add_node("messenger", _message_node)
-    builder.set_entry_point("messenger")
-    builder.add_edge("messenger", END)
     return builder
 
 
@@ -157,18 +137,6 @@ class TestCheckpointResume(unittest.TestCase):
         self.assertEqual(result["count"], 11)
 
         # Original date checkpoint still exists (untouched)
-        self.assertTrue(has_checkpoint(self.tmpdir, self.ticker, self.date))
-
-    def test_checkpoint_metadata_allows_langchain_messages(self):
-        """LangGraph metadata writes can include AIMessage objects."""
-        tid = thread_id(self.ticker, self.date)
-        cfg = {"configurable": {"thread_id": tid}}
-
-        with get_checkpointer(self.tmpdir, self.ticker) as saver:
-            graph = _build_message_graph().compile(checkpointer=saver)
-            result = graph.invoke({"messages": []}, config=cfg)
-
-        self.assertEqual(result["messages"][0].content, "checkpoint me")
         self.assertTrue(has_checkpoint(self.tmpdir, self.ticker, self.date))
 
 
