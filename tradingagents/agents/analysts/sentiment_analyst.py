@@ -39,6 +39,8 @@ from tradingagents.agents.utils.structured import (
     bind_structured,
     invoke_structured_or_freetext,
 )
+from tradingagents.dataflows.coingecko import fetch_coingecko_crypto_context
+from tradingagents.dataflows.crypto_utils import is_crypto_symbol
 from tradingagents.dataflows.reddit import fetch_reddit_posts
 from tradingagents.dataflows.stocktwits import fetch_stocktwits_messages
 
@@ -69,6 +71,11 @@ def create_sentiment_analyst(llm):
         news_block = get_news.func(ticker, start_date, end_date)
         stocktwits_block = fetch_stocktwits_messages(ticker, limit=30)
         reddit_block = fetch_reddit_posts(ticker)
+        crypto_context_block = (
+            fetch_coingecko_crypto_context(ticker)
+            if is_crypto_symbol(ticker)
+            else None
+        )
 
         system_message = _build_system_message(
             ticker=ticker,
@@ -77,6 +84,7 @@ def create_sentiment_analyst(llm):
             news_block=news_block,
             stocktwits_block=stocktwits_block,
             reddit_block=reddit_block,
+            crypto_context_block=crypto_context_block,
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -126,8 +134,20 @@ def _build_system_message(
     news_block: str,
     stocktwits_block: str,
     reddit_block: str,
+    crypto_context_block: str | None = None,
 ) -> str:
     """Assemble the sentiment-analyst system message with structured data blocks."""
+    coingecko_section = ""
+    if crypto_context_block:
+        coingecko_section = f"""
+### CoinGecko crypto context
+Crypto-native market, liquidity, community, and trending context; use CoinGecko as context, not as a standalone trading signal.
+
+<start_of_coingecko>
+{crypto_context_block}
+<end_of_coingecko>
+"""
+
     return f"""You are a financial market sentiment analyst. Your task is to produce a comprehensive sentiment report for {ticker} covering the period from {start_date} to {end_date}, drawing on three complementary data sources that have already been collected for you.
 
 ## Data sources (pre-fetched, in this prompt)
@@ -152,6 +172,7 @@ Community discussion. Engagement signal via upvote score and comment count. Subr
 <start_of_reddit>
 {reddit_block}
 <end_of_reddit>
+{coingecko_section}
 
 ## How to analyze this data (best practices)
 

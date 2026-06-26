@@ -9,6 +9,7 @@ from tradingagents.llm_clients.openai_client import (
     DeepSeekChatOpenAI,
     MinimaxChatOpenAI,
     NormalizedChatOpenAI,
+    OpenRouterChatOpenAI,
     is_openai_compatible,
 )
 
@@ -34,7 +35,7 @@ def test_registry_membership():
     ("glm-cn", "https://open.bigmodel.cn/api/paas/v4/", NormalizedChatOpenAI, False),
     ("minimax", "https://api.minimax.io/v1", MinimaxChatOpenAI, False),
     ("minimax-cn", "https://api.minimaxi.com/v1", MinimaxChatOpenAI, False),
-    ("openrouter", "https://openrouter.ai/api/v1", NormalizedChatOpenAI, False),
+    ("openrouter", "https://openrouter.ai/api/v1", OpenRouterChatOpenAI, False),
     ("mistral", "https://api.mistral.ai/v1", NormalizedChatOpenAI, False),
     ("kimi", "https://api.moonshot.ai/v1", NormalizedChatOpenAI, False),
     ("groq", "https://api.groq.com/openai/v1", NormalizedChatOpenAI, False),

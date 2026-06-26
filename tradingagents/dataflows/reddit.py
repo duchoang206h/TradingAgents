@@ -21,6 +21,7 @@ import html
 import http.client
 import json
 import logging
+import os
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -29,6 +30,8 @@ from datetime import datetime
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+from tradingagents.dataflows.crypto_utils import social_crypto_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,10 @@ _ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
 # discussion. wallstreetbets has the most volume but most noise; stocks /
 # investing trend more measured. Caller can override.
 DEFAULT_SUBREDDITS = ("wallstreetbets", "stocks", "investing")
+
+
+class _RedditBlockedError(RuntimeError):
+    """Raised when Reddit blocks unauthenticated public access."""
 
 
 def _search_qs(ticker: str, limit: int) -> str:
@@ -108,6 +115,9 @@ def _fetch_subreddit_rss(
         with urlopen(req, timeout=timeout) as resp:
             root = ET.fromstring(resp.read())
     except HTTPError as exc:
+        if exc.code == 403:
+            logger.warning("Reddit RSS 403 for r/%s · %s: %s", sub, ticker, exc)
+            raise _RedditBlockedError from exc
         if exc.code == 429 and _retry:
             wait = _retry_after_seconds(exc) or 5.0
             logger.warning(
@@ -186,6 +196,36 @@ def _fetch_subreddit(
     return _fetch_subreddit_rss(ticker, sub, limit, timeout)
 
 
+def _browser_subreddits(ticker: str, subreddits: Iterable[str]) -> tuple[str, ...]:
+    """Return browser-fallback subreddit targets for crypto-default searches."""
+    requested = tuple(subreddits)
+    if requested != DEFAULT_SUBREDDITS:
+        return requested
+    if social_crypto_symbol(ticker) == "HYPE":
+        return ("CryptoCurrency", "CryptoMarkets", "hyperliquid1")
+    return requested
+
+
+def _fetch_reddit_posts_browser(
+    ticker: str,
+    subreddits: Iterable[str],
+    limit_per_sub: int,
+    timeout: float,
+) -> str:
+    """Optional browser backend placeholder.
+
+    The public RSS path remains the default. This hook is intentionally small
+    so deployments can monkeypatch or extend it with a browser fetcher without
+    changing the sentiment analyst.
+    """
+    query_ticker = social_crypto_symbol(ticker)
+    targets = _browser_subreddits(query_ticker, subreddits)
+    return (
+        f"<reddit browser fallback unavailable for {query_ticker} across "
+        f"{', '.join(f'r/{s}' for s in targets)}>"
+    )
+
+
 def fetch_reddit_posts(
     ticker: str,
     subreddits: Iterable[str] = DEFAULT_SUBREDDITS,
@@ -200,19 +240,33 @@ def fetch_reddit_posts(
     stay under Reddit's public per-IP rate limit; combined with the RSS-first
     path it makes 429s rare even when several analyses run back-to-back.
     """
+    query_ticker = social_crypto_symbol(ticker)
     blocks = []
     total_posts = 0
     for i, sub in enumerate(subreddits):
         if i > 0:
             time.sleep(inter_request_delay)
-        posts = _fetch_subreddit(ticker, sub, limit_per_sub, timeout)
+        try:
+            posts = _fetch_subreddit(query_ticker, sub, limit_per_sub, timeout)
+        except _RedditBlockedError:
+            if os.environ.get("TRADINGAGENTS_REDDIT_BACKEND", "").lower() == "browser":
+                return _fetch_reddit_posts_browser(
+                    ticker,
+                    subreddits,
+                    limit_per_sub,
+                    timeout,
+                )
+            return (
+                "<reddit unavailable: HTTP 403 blocked unauthenticated public "
+                f"access for {query_ticker}>"
+            )
         total_posts += len(posts)
         if not posts:
-            blocks.append(f"r/{sub}: <no posts found mentioning {ticker.upper()} in the past 7 days>")
+            blocks.append(f"r/{sub}: <no posts found mentioning {query_ticker} in the past 7 days>")
             continue
 
         via_rss = any(p.get("source") == "rss" for p in posts)
-        header = f"r/{sub} — {len(posts)} recent posts mentioning {ticker.upper()}"
+        header = f"r/{sub} — {len(posts)} recent posts mentioning {query_ticker}"
         header += " (via RSS feed; scores/comments unavailable):" if via_rss else ":"
         lines = [header]
         for p in posts:
@@ -239,7 +293,7 @@ def fetch_reddit_posts(
 
     if total_posts == 0:
         return (
-            f"<no Reddit posts found mentioning {ticker.upper()} across "
+            f"<no Reddit posts found mentioning {query_ticker} across "
             f"{', '.join(f'r/{s}' for s in subreddits)} in the past 7 days>"
         )
     return "\n\n".join(blocks)

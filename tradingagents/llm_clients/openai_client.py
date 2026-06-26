@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from .api_key_env import get_api_key_env
 from .base_client import BaseLLMClient, normalize_content
 from .capabilities import get_capabilities
+from .openrouter_catalog import get_openrouter_attribution_headers
 from .validators import validate_model
 
 
@@ -66,6 +67,18 @@ class LocalCompatibleChatOpenAI(NormalizedChatOpenAI):
         if resolved == "function_calling":
             kwargs.setdefault("tool_choice", None)
         return super().with_structured_output(schema, method=method, **kwargs)
+
+
+class OpenRouterChatOpenAI(NormalizedChatOpenAI):
+    """OpenRouter client defaults for reliable graph structured output."""
+
+    def with_structured_output(self, schema, *, method=None, **kwargs):
+        kwargs.setdefault("strict", True)
+        return super().with_structured_output(
+            schema,
+            method=method or "json_schema",
+            **kwargs,
+        )
 
 
 def _input_to_messages(input_: Any) -> list:
@@ -219,7 +232,10 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderSpec] = {
     "glm-cn":     ProviderSpec(base_url="https://open.bigmodel.cn/api/paas/v4/"),
     "minimax":    ProviderSpec(base_url="https://api.minimax.io/v1", chat_class=MinimaxChatOpenAI),
     "minimax-cn": ProviderSpec(base_url="https://api.minimaxi.com/v1", chat_class=MinimaxChatOpenAI),
-    "openrouter": ProviderSpec(base_url="https://openrouter.ai/api/v1"),
+    "openrouter": ProviderSpec(
+        base_url="https://openrouter.ai/api/v1",
+        chat_class=OpenRouterChatOpenAI,
+    ),
     "mistral":    ProviderSpec(base_url="https://api.mistral.ai/v1"),
     "kimi":       ProviderSpec(base_url="https://api.moonshot.ai/v1"),
     "groq":       ProviderSpec(base_url="https://api.groq.com/openai/v1"),
@@ -318,6 +334,25 @@ class OpenAIClient(BaseLLMClient):
             # only speaks Chat Completions, so keep Responses off there (#1024).
             if spec.use_responses_api and _is_native_openai_base_url(base_url):
                 llm_kwargs["use_responses_api"] = True
+
+            if self.provider == "openrouter":
+                default_headers = get_openrouter_attribution_headers()
+                default_headers.update(self.kwargs.get("default_headers") or {})
+                if default_headers:
+                    llm_kwargs["default_headers"] = default_headers
+
+                extra_body = {"provider": {"require_parameters": True}}
+                user_extra_body = self.kwargs.get("extra_body") or {}
+                for key, value in user_extra_body.items():
+                    if (
+                        key == "provider"
+                        and isinstance(value, dict)
+                        and isinstance(extra_body["provider"], dict)
+                    ):
+                        extra_body["provider"].update(value)
+                    else:
+                        extra_body[key] = value
+                llm_kwargs["extra_body"] = extra_body
         elif self.base_url:
             llm_kwargs["base_url"] = self.base_url
 

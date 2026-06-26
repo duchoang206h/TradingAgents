@@ -25,7 +25,10 @@ from pydantic import BaseModel, Field, field_validator
 load_dotenv()
 
 from tradingagents.default_config import DEFAULT_CONFIG  # noqa: E402
-from tradingagents.dataflows.crypto_utils import normalize_crypto_symbol  # noqa: E402
+from tradingagents.dataflows.crypto_utils import (  # noqa: E402
+    is_crypto_symbol,
+    normalize_crypto_symbol,
+)
 from tradingagents.graph.trading_graph import TradingAgentsGraph  # noqa: E402
 from tradingagents.llm_clients.model_catalog import MODEL_OPTIONS  # noqa: E402
 from tradingagents.llm_clients.openrouter_catalog import (  # noqa: E402
@@ -442,6 +445,7 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
                 _push_stage(run_state, stage, status)
 
             ticker = normalize_crypto_symbol(req.ticker)
+            asset_type = "crypto" if is_crypto_symbol(ticker) else "stock"
             config = DEFAULT_CONFIG.copy()
             config["llm_provider"]          = req.provider
             config["quick_think_llm"]       = req.quick_model
@@ -490,7 +494,12 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
             _push({"type": "status", "message": f"Analyzing {ticker} on {req.date}"})
 
             prev: dict[str, str] = {}
-            for chunk in ta.propagate_stream(ticker, req.date, callbacks=[stats]):
+            for chunk in ta.propagate_stream(
+                ticker,
+                req.date,
+                asset_type=asset_type,
+                callbacks=[stats],
+            ):
                 if run_state.cancel_event.is_set():
                     _finish_active_stages(run_state, "cancelled")
                     _record_history_terminal(

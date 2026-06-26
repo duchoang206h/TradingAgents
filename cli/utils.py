@@ -7,7 +7,14 @@ from rich.console import Console
 
 from cli.models import AnalystType, AssetType
 from tradingagents.llm_clients.api_key_env import get_api_key_env
-from tradingagents.llm_clients.model_catalog import get_model_options
+from tradingagents.llm_clients.model_catalog import (
+    OPENROUTER_RECOMMENDED_MODELS,
+    get_model_options,
+)
+from tradingagents.llm_clients.openrouter_catalog import (
+    OpenRouterCatalogError,
+    get_openrouter_model_options,
+)
 
 console = Console()
 
@@ -209,8 +216,23 @@ _OPENROUTER_MAINSTREAM = {
 }
 
 
-def _fetch_openrouter_models() -> list[tuple[str, str]]:
-    """Fetch available models from the OpenRouter API."""
+def _fetch_openrouter_models(mode: str | None = None) -> list[tuple[str, str]]:
+    """Fetch available OpenRouter models.
+
+    When ``mode`` is provided, return graph-role-compatible catalog choices.
+    Without ``mode``, keep the legacy newest-first raw model list used by
+    older prompt tests and ad-hoc callers.
+    """
+    if mode is not None:
+        try:
+            return get_openrouter_model_options(mode)
+        except OpenRouterCatalogError as e:
+            console.print(f"\n[yellow]Could not fetch OpenRouter models: {e}[/yellow]")
+            return OPENROUTER_RECOMMENDED_MODELS.get(
+                mode,
+                [("Custom model ID", "custom")],
+            )
+
     import requests
     try:
         resp = requests.get("https://openrouter.ai/api/v1/models", timeout=10)
@@ -249,7 +271,7 @@ def select_openrouter_model(mode: str) -> str:
     ``mode`` ("quick"/"deep") labels the prompt so the two consecutive
     OpenRouter selections are distinguishable, like the other providers (#1000).
     """
-    models = _fetch_openrouter_models()  # newest first
+    models = _fetch_openrouter_models(mode)
     # Prefer the newest from mainstream providers so the shortlist isn't crowded
     # out by niche/experimental releases; fall back to all if none match.
     mainstream = [

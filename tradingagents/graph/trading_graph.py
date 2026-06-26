@@ -30,6 +30,7 @@ from tradingagents.agents.utils.agent_utils import (
 )
 from tradingagents.agents.utils.memory import TradingMemoryLog
 from tradingagents.dataflows.config import set_config
+from tradingagents.dataflows.crypto_utils import crypto_base_symbol, is_crypto_symbol
 from tradingagents.dataflows.utils import safe_ticker_component
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.llm_clients import create_llm_client
@@ -222,6 +223,11 @@ class TradingAgentsGraph:
         explicit = self.config.get("benchmark_ticker")
         if explicit:
             return explicit
+        if is_crypto_symbol(ticker):
+            base = crypto_base_symbol(ticker).upper()
+            if base == "BTC":
+                return self.config.get("crypto_btc_benchmark_ticker", "ETH-USD")
+            return self.config.get("crypto_benchmark_ticker", "BTC-USD")
         benchmark_map = self.config.get("benchmark_map", {})
         ticker_upper = ticker.upper()
         for suffix, benchmark in benchmark_map.items():
@@ -448,7 +454,13 @@ class TradingAgentsGraph:
             self.process_signal(final_state["final_trade_decision"]),
         )
 
-    def propagate_stream(self, company_name, trade_date, callbacks: list | None = None):
+    def propagate_stream(
+        self,
+        company_name,
+        trade_date,
+        asset_type: str = "stock",
+        callbacks: list | None = None,
+    ):
         """Stream graph state updates while preserving propagate side effects."""
         self.ticker = company_name
 
@@ -475,8 +487,13 @@ class TradingAgentsGraph:
 
         try:
             past_context = self.memory_log.get_past_context(company_name)
+            instrument_context = self.resolve_instrument_context(company_name, asset_type)
             init_agent_state = self.propagator.create_initial_state(
-                company_name, trade_date, past_context=past_context
+                company_name,
+                trade_date,
+                asset_type=asset_type,
+                past_context=past_context,
+                instrument_context=instrument_context,
             )
             args = self.propagator.get_graph_args(callbacks=callbacks)
 
