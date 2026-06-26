@@ -15,7 +15,6 @@ from .model_catalog import (
     ProviderModeOptions,
 )
 
-
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 DEFAULT_OPENROUTER_REFERER = "https://github.com/TauricResearch/TradingAgents"
 DEFAULT_OPENROUTER_TITLE = "TradingAgents"

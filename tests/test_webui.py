@@ -51,6 +51,7 @@ def test_propagate_stream_streams_and_persists_final_state(tmp_path):
     )
     graph._checkpointer_ctx = None
     graph.memory_log.get_past_context.return_value = "prior decisions"
+    graph.resolve_instrument_context.return_value = "instrument context"
     graph.propagator.create_initial_state.return_value = {"initial": "state"}
     graph.propagator.get_graph_args.return_value = {
         "stream_mode": "values",
@@ -72,7 +73,11 @@ def test_propagate_stream_streams_and_persists_final_state(tmp_path):
     graph._resolve_pending_entries.assert_called_once_with("NVDA")
     graph.memory_log.get_past_context.assert_called_once_with("NVDA")
     graph.propagator.create_initial_state.assert_called_once_with(
-        "NVDA", "2026-01-10", past_context="prior decisions"
+        "NVDA",
+        "2026-01-10",
+        asset_type="stock",
+        past_context="prior decisions",
+        instrument_context="instrument context",
     )
     graph.propagator.get_graph_args.assert_called_once_with(callbacks=callbacks)
     graph.memory_log.store_decision.assert_called_once_with(
@@ -99,6 +104,13 @@ def test_webui_is_installable_from_package_metadata():
     assert 'webui = ["static/*"]' in pyproject
 
 
+def test_webui_provider_dropdown_includes_backend_providers():
+    html = Path("webui/static/index.html").read_text(encoding="utf-8")
+
+    for provider in webui_server.MODEL_OPTIONS:
+        assert f'<option value="{provider}">' in html
+
+
 def test_propagate_stream_localizes_yielded_copy_but_persists_canonical_state(tmp_path):
     canonical_state = _final_state()
     localized_state = dict(canonical_state)
@@ -115,6 +127,7 @@ def test_propagate_stream_localizes_yielded_copy_but_persists_canonical_state(tm
     )
     graph._checkpointer_ctx = None
     graph.memory_log.get_past_context.return_value = ""
+    graph.resolve_instrument_context.return_value = "instrument context"
     graph.propagator.create_initial_state.return_value = {"initial": "state"}
     graph.propagator.get_graph_args.return_value = {
         "stream_mode": "values",
@@ -231,7 +244,7 @@ def test_start_analysis_applies_risk_rounds_independently(monkeypatch):
             captured["config"] = config
             self.curr_state = {"final_trade_decision": "Rating: Hold"}
 
-        def propagate_stream(self, ticker, trade_date, callbacks):
+        def propagate_stream(self, ticker, trade_date, asset_type="stock", callbacks=None):
             yield {"final_trade_decision": "Rating: Hold"}
 
         def process_signal(self, decision):
@@ -257,6 +270,39 @@ def test_start_analysis_applies_risk_rounds_independently(monkeypatch):
     assert captured["config"]["max_risk_discuss_rounds"] == 5
 
 
+def test_start_analysis_passes_crypto_asset_type_to_stream(monkeypatch):
+    captured = {}
+    monkeypatch.setitem(webui_server.DEFAULT_CONFIG, "analysis_history_enabled", False)
+
+    class FakeTradingAgentsGraph:
+        def __init__(self, selected_analysts, debug, config, callbacks):
+            self.curr_state = {"final_trade_decision": "Rating: Hold"}
+
+        def propagate_stream(self, ticker, trade_date, asset_type="stock", callbacks=None):
+            captured["ticker"] = ticker
+            captured["asset_type"] = asset_type
+            yield {"final_trade_decision": "Rating: Hold"}
+
+        def process_signal(self, decision):
+            return "Hold"
+
+    monkeypatch.setattr(webui_server, "TradingAgentsGraph", FakeTradingAgentsGraph)
+    request = webui_server.AnalyzeRequest(
+        ticker="hype",
+        date="2020-01-10",
+        analysts=["market"],
+        provider="openai",
+    )
+
+    result = asyncio.run(webui_server.start_analysis(request))
+    run_state = webui_server._runs[result["run_id"]]
+    while run_state.queue.get(timeout=2) is not None:
+        pass
+    webui_server._runs.pop(result["run_id"], None)
+
+    assert captured == {"ticker": "HYPE32196-USD", "asset_type": "crypto"}
+
+
 def test_start_analysis_advances_stage_on_downstream_start_without_report(monkeypatch):
     monkeypatch.setitem(webui_server.DEFAULT_CONFIG, "analysis_history_enabled", False)
 
@@ -264,7 +310,7 @@ def test_start_analysis_advances_stage_on_downstream_start_without_report(monkey
         def __init__(self, selected_analysts, debug, config, callbacks):
             self.curr_state = {"final_trade_decision": "Rating: Hold"}
 
-        def propagate_stream(self, ticker, trade_date, callbacks):
+        def propagate_stream(self, ticker, trade_date, asset_type="stock", callbacks=None):
             callback = callbacks[0]
             callback.on_chain_start(
                 {},
@@ -333,7 +379,7 @@ def test_start_analysis_records_server_side_history(monkeypatch, tmp_path):
         def __init__(self, selected_analysts, debug, config, callbacks):
             self.curr_state = None
 
-        def propagate_stream(self, ticker, trade_date, callbacks):
+        def propagate_stream(self, ticker, trade_date, asset_type="stock", callbacks=None):
             yield {"market_report": "Market report"}
             self.curr_state = _final_state()
             yield self.curr_state

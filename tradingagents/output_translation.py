@@ -8,7 +8,8 @@ interfaces, so translation cannot alter trading behavior.
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from tradingagents.llm_clients.base_client import normalize_content
 

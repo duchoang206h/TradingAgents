@@ -16,6 +16,7 @@ import os
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompt_values import ChatPromptValue
+from openai import APIStatusError
 from pydantic import BaseModel
 
 from tradingagents.llm_clients.openai_client import (
@@ -23,7 +24,6 @@ from tradingagents.llm_clients.openai_client import (
     NormalizedChatOpenAI,
     _input_to_messages,
 )
-
 
 # ---------------------------------------------------------------------------
 # _input_to_messages — the helper that handles list / ChatPromptValue / other
@@ -215,10 +215,15 @@ class TestDeepSeekLiveStructuredOutput:
             timeout=60,
         )
         bound = client.with_structured_output(self._Pick)
-        result = bound.invoke(
-            "Pick BUY or SELL or HOLD for a tech stock with strong earnings. "
-            "Confidence is a float between 0 and 1."
-        )
+        try:
+            result = bound.invoke(
+                "Pick BUY or SELL or HOLD for a tech stock with strong earnings. "
+                "Confidence is a float between 0 and 1."
+            )
+        except APIStatusError as exc:
+            if exc.status_code == 402:
+                pytest.skip("DeepSeek live API account has insufficient balance")
+            raise
         assert isinstance(result, self._Pick)
         assert result.action in {"BUY", "SELL", "HOLD"}
         assert 0.0 <= result.confidence <= 1.0
