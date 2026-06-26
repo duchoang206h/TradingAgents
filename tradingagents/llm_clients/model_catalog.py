@@ -78,7 +78,7 @@ _MINIMAX_MODELS: dict[str, list[ModelOption]] = {
 }
 
 
-OPENROUTER_RECOMMENDED_MODELS: Dict[str, List[ModelOption]] = {
+OPENROUTER_RECOMMENDED_MODELS: dict[str, list[ModelOption]] = {
     "quick": [
         (
             "DeepSeek V4 Flash - Efficient quick default, 1M ctx, "

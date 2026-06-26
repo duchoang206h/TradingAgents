@@ -24,11 +24,11 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
-from tradingagents.default_config import DEFAULT_CONFIG  # noqa: E402
 from tradingagents.dataflows.crypto_utils import (  # noqa: E402
     is_crypto_symbol,
     normalize_crypto_symbol,
 )
+from tradingagents.default_config import DEFAULT_CONFIG  # noqa: E402
 from tradingagents.graph.trading_graph import TradingAgentsGraph  # noqa: E402
 from tradingagents.llm_clients.model_catalog import MODEL_OPTIONS  # noqa: E402
 from tradingagents.llm_clients.openrouter_catalog import (  # noqa: E402
@@ -36,7 +36,6 @@ from tradingagents.llm_clients.openrouter_catalog import (  # noqa: E402
     get_openrouter_model_catalog,
 )
 from tradingagents.observability import AnalysisHistoryStore  # noqa: E402
-
 
 logger = logging.getLogger(__name__)
 

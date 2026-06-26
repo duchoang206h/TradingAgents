@@ -1,5 +1,6 @@
-import pytest
 from urllib.error import HTTPError
+
+import pytest
 
 from tradingagents.dataflows import reddit, stocktwits
 

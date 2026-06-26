@@ -14,13 +14,11 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
 import time
 from pathlib import Path
 from urllib.parse import quote_plus
 
 from tradingagents.dataflows.crypto_utils import social_crypto_symbol
-
 
 DEFAULT_SUBREDDITS = ("wallstreetbets", "stocks", "investing")
 SYMBOL_SEARCH_PROFILES = {

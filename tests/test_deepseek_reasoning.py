@@ -14,9 +14,9 @@ Two pieces verified:
 import os
 
 import pytest
-from openai import APIStatusError
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompt_values import ChatPromptValue
+from openai import APIStatusError
 from pydantic import BaseModel
 
 from tradingagents.llm_clients.openai_client import (
