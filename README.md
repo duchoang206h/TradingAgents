@@ -27,7 +27,24 @@
 
 # TradingAgents: Multi-Agents LLM Financial Trading Framework
 
-## News
+## Fork Notice
+
+This repository is a fork of the original
+[TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)
+project. The upstream project, paper, assets, and community links remain
+credited to Tauric Research. Changes in this fork are maintained separately for
+local development, documentation, experiments, and project-specific
+customizations.
+
+When you need the canonical upstream release, compare against or clone the
+original repository. When working in this fork, check the branch history and pull
+requests for fork-specific changes before assuming behavior matches upstream.
+
+## Upstream News
+
+The release notes below come from the upstream TradingAgents project unless this
+fork explicitly says otherwise.
+
 - [2026-06] **TradingAgents v0.3.0** released with a verified data-access contract, an expanded provider registry (NVIDIA, Kimi, Groq, Mistral, Bedrock, and any OpenAI-compatible endpoint), FRED and Polymarket data vendors, a current-generation model catalog, and a CI gate. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 - [2026-05] **TradingAgents v0.2.5** released with the grounded Sentiment Analyst, GPT-5.5 etc. model coverage, Qwen/GLM/MiniMax dual-region support, `TRADINGAGENTS_*` env-var configurability with API-key auto-detection, remote Ollama support, non-US alpha benchmarks, and ticker path-traversal hardening.
 - [2026-04] **TradingAgents v0.2.4** released with structured-output agents (Research Manager, Trader, Portfolio Manager), LangGraph checkpoint resume, persistent decision log, DeepSeek/Qwen/GLM/Azure provider support, Docker, and a Windows UTF-8 encoding fix.
@@ -52,7 +69,7 @@
 
 <div align="center">
 
-🚀 [TradingAgents](#tradingagents-framework) | ⚡ [Installation & CLI](#installation-and-cli) | 🎬 [Demo](https://www.youtube.com/watch?v=90gr5lwjIho) | 📦 [Package Usage](#tradingagents-package) | 🤝 [Contributing](#contributing) | 📄 [Citation](#citation)
+🚀 [TradingAgents](#tradingagents-framework) | 🔀 [Fork Notice](#fork-notice) | ⚡ [Installation & CLI](#installation-and-cli) | 🖥️ [WebUI](#webui-usage) | 🎬 [Demo](https://www.youtube.com/watch?v=90gr5lwjIho) | 📦 [Package Usage](#tradingagents-package) | 🤝 [Contributing](#contributing) | 📄 [Citation](#citation)
 
 </div>
 
@@ -104,11 +121,14 @@ Our framework decomposes complex trading tasks into specialized roles.
 
 ### Installation
 
-Clone TradingAgents:
+Clone this fork:
 ```bash
-git clone https://github.com/TauricResearch/TradingAgents.git
+git clone https://github.com/duchoang206h/TradingAgents.git
 cd TradingAgents
 ```
+
+To work from the original upstream project instead, clone
+`https://github.com/TauricResearch/TradingAgents.git`.
 
 Create a virtual environment in any of your favorite environment managers:
 ```bash
@@ -199,6 +219,50 @@ An interface will appear showing results as they load, letting you track the age
 <p align="center">
   <img src="assets/cli/cli_transaction.png" width="100%" style="display: inline-block; margin: 0 2%;">
 </p>
+
+### WebUI Usage
+
+Run the browser-based workspace from source:
+
+```bash
+python -m webui
+```
+
+If installed as a package, you can also launch it with:
+
+```bash
+tradingagents-web
+```
+
+Then open `http://localhost:8001` in your browser. The WebUI lets you configure
+the ticker, analysis date, analyst team, research depth, provider, models,
+output language, and checkpoint resume from one screen. It streams pipeline
+progress, shows completed agent reports in tabs, summarizes the final decision,
+and keeps local analysis history when history storage is enabled.
+
+<p align="center">
+  <img src="assets/webui/shot-mr52ha6z.png" width="100%" style="display: inline-block; margin: 0 2%;" alt="TradingAgents WebUI pipeline and agent reports">
+</p>
+
+<p align="center"><em>Pipeline overview and completed agent report tabs.</em></p>
+
+<p align="center">
+  <img src="assets/webui/shot-mr52g7b6.png" width="100%" style="display: inline-block; margin: 0 2%;" alt="TradingAgents WebUI final decision summary">
+</p>
+
+<p align="center"><em>Final decision summary with run duration, LLM calls, tool calls, and token usage.</em></p>
+
+<p align="center">
+  <img src="assets/webui/shot-mr52i02y.png" width="100%" style="display: inline-block; margin: 0 2%;" alt="TradingAgents WebUI agent reports and analysis history">
+</p>
+
+<p align="center"><em>Agent report viewer with copy/export actions and the analysis history below.</em></p>
+
+<p align="center">
+  <img src="assets/webui/shot-mr52iaor.png" width="100%" style="display: inline-block; margin: 0 2%;" alt="TradingAgents WebUI analysis history">
+</p>
+
+<p align="center"><em>Analysis history for reviewing prior runs or rerunning a saved configuration.</em></p>
 
 ## TradingAgents Package
 
@@ -292,11 +356,15 @@ Backtest results are not guaranteed to match any published figure. Returns depen
 
 ## Contributing
 
-Contributions are welcome: bug fixes, documentation, and feature ideas; past contributions are credited per release in [`CHANGELOG.md`](CHANGELOG.md).
+For fork-specific changes, open issues or pull requests against this repository.
+For changes intended for the canonical project, consider contributing upstream at
+[TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents).
+Past upstream contributions are credited per release in
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ## Citation
 
-Please reference our work if you find *TradingAgents* provides you with some help :)
+Please cite the original TradingAgents paper if this project helps your work:
 
 ```
 @misc{xiao2025tradingagentsmultiagentsllmfinancial,
