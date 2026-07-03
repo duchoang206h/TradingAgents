@@ -27,6 +27,19 @@
 
 # TradingAgents: Multi-Agents LLM Financial Trading Framework
 
+## Fork Notice
+
+This repository is a fork of the original
+[TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)
+project. The upstream project, paper, assets, and community links remain
+credited to Tauric Research. Changes in this fork are maintained separately for
+local development, documentation, experiments, and project-specific
+customizations.
+
+When you need the canonical upstream release, compare against or clone the
+original repository. When working in this fork, check the branch history and pull
+requests for fork-specific changes before assuming behavior matches upstream.
+
 ## News
 - [2026-06] **TradingAgents v0.3.0** released with a verified data-access contract, an expanded provider registry (NVIDIA, Kimi, Groq, Mistral, Bedrock, and any OpenAI-compatible endpoint), FRED and Polymarket data vendors, a current-generation model catalog, and a CI gate. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 - [2026-05] **TradingAgents v0.2.5** released with the grounded Sentiment Analyst, GPT-5.5 etc. model coverage, Qwen/GLM/MiniMax dual-region support, `TRADINGAGENTS_*` env-var configurability with API-key auto-detection, remote Ollama support, non-US alpha benchmarks, and ticker path-traversal hardening.
