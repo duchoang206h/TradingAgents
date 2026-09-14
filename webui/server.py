@@ -179,10 +179,12 @@ class AnalyzeRequest(BaseModel):
         default_factory=lambda: ["market", "social", "news", "fundamentals"]
     )
     provider: str = "openai"
-    quick_model: str = Field(default="gpt-5.4-mini", min_length=1, max_length=120)
-    deep_model: str = Field(default="gpt-5.4-mini", min_length=1, max_length=120)
+    quick_model: str = Field(default="gpt-5.6-luna", min_length=1, max_length=120)
+    deep_model: str = Field(default="gpt-5.6", min_length=1, max_length=120)
     max_debate_rounds: int = Field(default=1, ge=1, le=5)
     max_risk_discuss_rounds: int = Field(default=1, ge=1, le=5)
+    max_tokens: int | None = Field(default=None, ge=1)
+    llm_max_retries: int | None = Field(default=None, ge=0)
     language: str = Field(default="English", min_length=1, max_length=60)
     checkpoint: bool = False
 
@@ -453,6 +455,10 @@ async def start_analysis(req: AnalyzeRequest) -> dict:
             config["max_risk_discuss_rounds"] = req.max_risk_discuss_rounds
             config["output_language"]       = req.language
             config["checkpoint_enabled"]    = req.checkpoint
+            if req.max_tokens is not None:
+                config["max_tokens"] = req.max_tokens
+            if req.llm_max_retries is not None:
+                config["llm_max_retries"] = req.llm_max_retries
 
             try:
                 history_store = _history_store(config)

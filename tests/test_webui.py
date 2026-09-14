@@ -179,6 +179,44 @@ def test_analyze_request_rejects_future_date_and_unknown_provider():
         )
 
 
+def test_analyze_request_defaults_models_to_upstream_and_accepts_new_tunables():
+    request = webui_server.AnalyzeRequest(
+        ticker="NVDA",
+        date="2020-01-10",
+        analysts=["market"],
+        provider="openai",
+    )
+
+    assert request.quick_model == "gpt-5.6-luna"
+    assert request.deep_model == "gpt-5.6"
+    assert request.max_tokens is None
+    assert request.llm_max_retries is None
+
+    tuned = webui_server.AnalyzeRequest(
+        ticker="NVDA",
+        date="2020-01-10",
+        analysts=["market"],
+        provider="openai",
+        max_tokens=4096,
+        llm_max_retries=3,
+    )
+
+    assert tuned.max_tokens == 4096
+    assert tuned.llm_max_retries == 3
+
+
+@pytest.mark.parametrize("field,value", [("max_tokens", 0), ("llm_max_retries", -1)])
+def test_analyze_request_rejects_invalid_tunables(field, value):
+    with pytest.raises(ValidationError):
+        webui_server.AnalyzeRequest(
+            ticker="NVDA",
+            date="2020-01-10",
+            analysts=["market"],
+            provider="openai",
+            **{field: value},
+        )
+
+
 def test_stage_events_are_deduplicated_and_report_completes_related_stages():
     run_state = webui_server.RunState()
 
@@ -268,6 +306,41 @@ def test_start_analysis_applies_risk_rounds_independently(monkeypatch):
 
     assert captured["config"]["max_debate_rounds"] == 2
     assert captured["config"]["max_risk_discuss_rounds"] == 5
+
+
+def test_start_analysis_forwards_max_tokens_and_llm_retry_budget(monkeypatch):
+    captured = {}
+    monkeypatch.setitem(webui_server.DEFAULT_CONFIG, "analysis_history_enabled", False)
+
+    class FakeTradingAgentsGraph:
+        def __init__(self, selected_analysts, debug, config, callbacks):
+            captured["config"] = config
+            self.curr_state = {"final_trade_decision": "Rating: Hold"}
+
+        def propagate_stream(self, ticker, trade_date, asset_type="stock", callbacks=None):
+            yield {"final_trade_decision": "Rating: Hold"}
+
+        def process_signal(self, decision):
+            return "Hold"
+
+    monkeypatch.setattr(webui_server, "TradingAgentsGraph", FakeTradingAgentsGraph)
+    request = webui_server.AnalyzeRequest(
+        ticker="NVDA",
+        date="2020-01-10",
+        analysts=["market"],
+        provider="openai",
+        max_tokens=4096,
+        llm_max_retries=3,
+    )
+
+    result = asyncio.run(webui_server.start_analysis(request))
+    run_state = webui_server._runs[result["run_id"]]
+    while run_state.queue.get(timeout=2) is not None:
+        pass
+    webui_server._runs.pop(result["run_id"], None)
+
+    assert captured["config"]["max_tokens"] == 4096
+    assert captured["config"]["llm_max_retries"] == 3
 
 
 def test_start_analysis_passes_crypto_asset_type_to_stream(monkeypatch):
@@ -445,6 +518,14 @@ def test_webui_page_is_self_contained_and_exposes_accessible_run_controls():
     assert 'role="tablist"' in page
     assert 'aria-live="assertive"' in page
     assert "max_risk_discuss_rounds: riskRounds" in page
+    assert 'id="maxTokens"' in page
+    assert 'id="llmRetries"' in page
+    assert 'id="maxTokensError"' in page
+    assert 'id="llmRetriesError"' in page
+    assert "max_tokens: maxTokens," in page
+    assert "llm_max_retries: llmMaxRetries," in page
+    assert '"gpt-5.6-luna"' in page
+    assert '"gpt-5.6"' in page
     assert 'fetch(`/api/cancel/${currentRunId}`' in page
     assert 'fetch("/api/history?limit=100")' in page
     assert "Analysis history" in page
