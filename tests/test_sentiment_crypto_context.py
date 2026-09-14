@@ -50,12 +50,12 @@ def test_sentiment_node_fetches_coingecko_only_for_crypto(monkeypatch):
     monkeypatch.setattr(
         sentiment_analyst,
         "fetch_stocktwits_messages",
-        lambda ticker, limit=30: "stocktwits",
+        lambda ticker, limit=30, start_date=None, end_date=None: "stocktwits",
     )
     monkeypatch.setattr(
         sentiment_analyst,
         "fetch_reddit_posts",
-        lambda ticker: "reddit",
+        lambda ticker, start_date=None, end_date=None: "reddit",
     )
 
     def fake_coingecko(ticker):
@@ -94,12 +94,12 @@ def test_sentiment_node_skips_coingecko_for_equities(monkeypatch):
     monkeypatch.setattr(
         sentiment_analyst,
         "fetch_stocktwits_messages",
-        lambda ticker, limit=30: "stocktwits",
+        lambda ticker, limit=30, start_date=None, end_date=None: "stocktwits",
     )
     monkeypatch.setattr(
         sentiment_analyst,
         "fetch_reddit_posts",
-        lambda ticker: "reddit",
+        lambda ticker, start_date=None, end_date=None: "reddit",
     )
     monkeypatch.setattr(
         sentiment_analyst,

@@ -76,6 +76,14 @@ def split_crypto_symbol(symbol: str) -> tuple[str, str | None]:
     base = _canonical_crypto_base(cleaned)
     if base in COMMON_CRYPTO_BASES:
         return base, None
+    # Undashed broker forms (``BTCUSD`` for ``BTC-USD``) quote a known
+    # currency as a suffix; longest quote first so ``ETHUSDT`` is not read
+    # off as ``ETH`` + the tail of a longer string.
+    for quote in sorted(CRYPTO_QUOTES, key=len, reverse=True):
+        if len(cleaned) > len(quote) and cleaned.endswith(quote):
+            base = _canonical_crypto_base(cleaned[: -len(quote)])
+            if base in COMMON_CRYPTO_BASES:
+                return base, quote
     return cleaned, None
 
 
