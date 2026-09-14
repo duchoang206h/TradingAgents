@@ -664,6 +664,21 @@
                   </select>
                 </div>
 
+                <div class="form-grid">
+                  <div class="field">
+                    <label class="field-label" for="maxTokens">Max output tokens</label>
+                    <input id="maxTokens" type="number" min="1" inputmode="numeric" placeholder="Unlimited (default)" autocomplete="off" aria-describedby="maxTokensError">
+                    <p id="maxTokensError" class="field-error"></p>
+                    <p id="maxTokensNote" class="key-note">Optional cap forwarded to every provider.</p>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="llmRetries">LLM retry budget</label>
+                    <input id="llmRetries" type="number" min="0" inputmode="numeric" placeholder="Provider default" autocomplete="off" aria-describedby="llmRetriesError">
+                    <p id="llmRetriesError" class="field-error"></p>
+                    <p id="llmRetriesNote" class="key-note">Optional retries for transient rate limits.</p>
+                  </div>
+                </div>
+
                 <label class="switch-row">
                   <input id="checkpoint" type="checkbox">
                   <span>Enable checkpoint resume</span>
@@ -956,7 +971,7 @@
         if (!response.ok) throw new Error(`Model catalog request failed (${response.status})`);
         models = await response.json();
       } catch (error) {
-        models = { openai: { quick: [["Default quick model", "gpt-5.4-mini"]], deep: [["Default deep model", "gpt-5.4"]] } };
+        models = { openai: { quick: [["Default quick model", "gpt-5.6-luna"]], deep: [["Default deep model", "gpt-5.6"]] } };
         showNotice("The model catalog could not be loaded. OpenAI defaults are available; refresh to try again.", "warning");
       }
       updateModelSelects();
@@ -1029,6 +1044,10 @@
       const deepModel = getModelValue("deepModel");
       const debateRounds = Number(byId("debateRounds").value);
       const riskRounds = Number(byId("riskRounds").value);
+      const maxTokensRaw = byId("maxTokens").value.trim();
+      const llmRetriesRaw = byId("llmRetries").value.trim();
+      const maxTokens = maxTokensRaw === "" ? null : Number(maxTokensRaw);
+      const llmMaxRetries = llmRetriesRaw === "" ? null : Number(llmRetriesRaw);
 
       if (!ticker || ticker.length > 32 || !/^[A-Z0-9._\-\^]+$/.test(ticker)) {
         setFieldError("ticker", "Enter a valid ticker, such as NVDA, 0700.HK, or BTC-USD.");
@@ -1061,6 +1080,14 @@
         setFieldError("riskRounds", "Use a value from 1 to 5.");
         valid = false;
       }
+      if (maxTokens !== null && (!Number.isInteger(maxTokens) || maxTokens < 1)) {
+        setFieldError("maxTokens", "Use a positive integer or leave it empty.");
+        valid = false;
+      }
+      if (llmMaxRetries !== null && (!Number.isInteger(llmMaxRetries) || llmMaxRetries < 0)) {
+        setFieldError("llmRetries", "Use a non-negative integer or leave it empty.");
+        valid = false;
+      }
 
       if (!valid) {
         showNotice("Review the highlighted configuration fields.", "error");
@@ -1079,6 +1106,8 @@
         max_risk_discuss_rounds: riskRounds,
         language: byId("language").value,
         checkpoint: byId("checkpoint").checked,
+        max_tokens: maxTokens,
+        llm_max_retries: llmMaxRetries,
       };
     }
 
@@ -1835,6 +1864,8 @@
       byId("riskRounds").value = saved.max_risk_discuss_rounds || 1;
       if (saved.language && Array.from(byId("language").options).some(option => option.value === saved.language)) byId("language").value = saved.language;
       byId("checkpoint").checked = Boolean(saved.checkpoint);
+      if (saved.max_tokens) byId("maxTokens").value = saved.max_tokens;
+      if (typeof saved.llm_max_retries === "number") byId("llmRetries").value = saved.llm_max_retries;
       document.querySelectorAll('input[name="preset"]').forEach(input => { input.checked = false; });
     }
 
