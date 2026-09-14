@@ -15,7 +15,7 @@ class _FakeResponse:
     def __exit__(self, *args):
         return False
 
-    def read(self, size=-1):
+    def read(self):
         return self._payload
 
 
@@ -35,23 +35,13 @@ def test_stocktwits_uses_crypto_stream_symbol(monkeypatch):
     assert "$HYPE.X" in result
 
 
-_RSS_FEED = (
-    b'<feed xmlns="http://www.w3.org/2005/Atom">'
-    b"<title>search</title>"
-    b"<entry><title>HYPE to the moon</title>"
-    b"<published>2026-09-01T00:00:00Z</published>"
-    b"<content>waiting for the breakout</content></entry>"
-    b"</feed>"
-)
-
-
 @pytest.mark.unit
 def test_reddit_uses_canonical_crypto_query(monkeypatch):
     captured = {}
 
     def fake_urlopen(req, timeout):
         captured["url"] = req.full_url
-        return _FakeResponse(_RSS_FEED)
+        return _FakeResponse(b'{"data": {"children": []}}')
 
     monkeypatch.setattr(reddit, "urlopen", fake_urlopen)
 

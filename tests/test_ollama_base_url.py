@@ -3,19 +3,8 @@
 from __future__ import annotations
 
 import importlib
-import re
 
 import pytest
-
-# Rich colorizes console output and highlights numbers and URLs, which splits
-# asserted substrings with escape codes ("port \x1b[1;33m11434"). Whether it
-# does so depends on the ambient terminal, so strip the codes to keep these
-# assertions independent of where the suite runs.
-_ANSI = re.compile(r"\x1b\[[0-9;]*m")
-
-
-def _console_out(capsys) -> str:
-    return _ANSI.sub("", capsys.readouterr().out)
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -133,7 +122,7 @@ def test_confirm_endpoint_shows_default(monkeypatch, capsys):
     import cli.utils as cli_utils
     importlib.reload(cli_utils)
     cli_utils.confirm_ollama_endpoint("http://localhost:11434/v1")
-    out = _console_out(capsys)
+    out = capsys.readouterr().out
     assert "http://localhost:11434/v1" in out
     assert "OLLAMA_BASE_URL" not in out  # not from env
     assert "Note" not in out  # no warnings for the canonical default
@@ -144,7 +133,7 @@ def test_confirm_endpoint_marks_env_origin(monkeypatch, capsys):
     import cli.utils as cli_utils
     importlib.reload(cli_utils)
     cli_utils.confirm_ollama_endpoint("http://remote-host:11434/v1")
-    out = _console_out(capsys)
+    out = capsys.readouterr().out
     assert "http://remote-host:11434/v1" in out
     assert "OLLAMA_BASE_URL" in out
 
@@ -155,7 +144,7 @@ def test_confirm_endpoint_warns_on_missing_scheme(monkeypatch, capsys):
     import cli.utils as cli_utils
     importlib.reload(cli_utils)
     cli_utils.confirm_ollama_endpoint("0.0.0.128")
-    out = _console_out(capsys)
+    out = capsys.readouterr().out
     assert "missing a scheme" in out
     assert "http://<host>:11434/v1" in out
 
@@ -166,7 +155,7 @@ def test_confirm_endpoint_warns_on_non_default_port_remote(monkeypatch, capsys):
     import cli.utils as cli_utils
     importlib.reload(cli_utils)
     cli_utils.confirm_ollama_endpoint("http://remote-host/v1")
-    out = _console_out(capsys)
+    out = capsys.readouterr().out
     assert "port 11434" in out
 
 
@@ -176,7 +165,7 @@ def test_confirm_endpoint_quiet_on_local_no_port(monkeypatch, capsys):
     import cli.utils as cli_utils
     importlib.reload(cli_utils)
     cli_utils.confirm_ollama_endpoint("http://localhost/v1")
-    out = _console_out(capsys)
+    out = capsys.readouterr().out
     assert "Note" not in out  # localhost is fine without explicit port
 
 

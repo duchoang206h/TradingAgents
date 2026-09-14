@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from typing import Annotated
 
@@ -6,7 +5,6 @@ import pandas as pd
 import yfinance as yf
 from dateutil.relativedelta import relativedelta
 
-from .date_window import withhold_live_profile
 from .stockstats_utils import (
     StockstatsUtils,
     _assert_ohlcv_not_stale,
@@ -15,8 +13,6 @@ from .stockstats_utils import (
     yf_retry,
 )
 from .symbol_utils import NoMarketDataError, normalize_symbol
-
-logger = logging.getLogger(__name__)
 
 
 def get_YFin_data_online(
@@ -192,7 +188,7 @@ def get_stock_stats_indicators_window(
     except NoMarketDataError:
         raise  # Unknown/delisted symbol — let the router emit the sentinel
     except Exception as e:
-        logger.warning("Bulk stockstats fetch failed, falling back per-day: %s", e)
+        print(f"Error getting bulk stockstats data: {e}")
         # Fallback to original implementation if bulk method fails
         ind_string = ""
         curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
@@ -267,7 +263,9 @@ def get_stockstats_indicator(
     except NoMarketDataError:
         raise  # Unknown/delisted symbol — let the router emit the sentinel
     except Exception as e:
-        logger.warning("Stockstats indicator %s failed on %s: %s", indicator, curr_date, e)
+        print(
+            f"Error getting stockstats indicator data for indicator {indicator} on {curr_date}: {e}"
+        )
         return ""
 
     return str(indicator_value)
@@ -275,22 +273,10 @@ def get_stockstats_indicator(
 
 def get_fundamentals(
     ticker: Annotated[str, "ticker symbol of the company"],
-    curr_date: Annotated[str, "analysis date in YYYY-MM-DD format"] = None
+    curr_date: Annotated[str, "current date (not used for yfinance)"] = None
 ):
-    """Get company fundamentals overview from yfinance.
-
-    ``Ticker.info`` is a present-day snapshot with no historical vintage, so a
-    past ``curr_date`` withholds it through the shared point-in-time guard
-    (``date_window.withhold_live_profile``, #1300).
-    """
+    """Get company fundamentals overview from yfinance."""
     canonical = normalize_symbol(ticker)
-
-    # Guard before the request: the response would only be discarded, and the
-    # answer does not depend on it.
-    withheld = withhold_live_profile(curr_date, canonical)
-    if withheld:
-        return withheld
-
     try:
         ticker_obj = yf.Ticker(canonical)
         info = yf_retry(lambda: ticker_obj.info)
@@ -329,7 +315,10 @@ def get_fundamentals(
             ("Free Cash Flow", info.get("freeCashflow")),
         ]
 
-        lines = [f"{label}: {v}" for label, v in fields if v is not None]
+        lines = []
+        for label, value in fields:
+            if value is not None:
+                lines.append(f"{label}: {value}")
 
         # yfinance returns a stub dict (e.g. {"trailingPegRatio": None}) for
         # unknown symbols, so `info` is truthy but every field is empty. Treat
