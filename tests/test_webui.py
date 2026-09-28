@@ -70,7 +70,7 @@ def test_propagate_stream_streams_and_persists_final_state(tmp_path):
     )
 
     assert chunks == graph.graph.stream.return_value
-    graph._resolve_pending_entries.assert_called_once_with("NVDA")
+    graph.settle_pending.assert_called_once_with("NVDA")
     graph.memory_log.get_past_context.assert_called_once_with("NVDA")
     graph.propagator.create_initial_state.assert_called_once_with(
         "NVDA",

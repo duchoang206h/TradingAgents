@@ -10,7 +10,7 @@ import pytest
 import requests
 from pydantic import BaseModel
 
-from cli import utils as cli_utils
+from cli import prompts as cli_utils
 from tradingagents.llm_clients import openrouter_catalog
 from tradingagents.llm_clients.openai_client import OpenAIClient
 from webui import server as webui_server

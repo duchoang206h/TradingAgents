@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tradingagents.dataflows.utils import safe_ticker_component
+from tradingagents.dataflows.symbols import safe_ticker_component
 
 _REPORT_FIELDS = {
     "market_report",
